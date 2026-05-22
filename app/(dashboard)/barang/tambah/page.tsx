@@ -92,7 +92,7 @@ export default function TambahBarangPage() {
 
       if (error) throw error;
 
-      await supabase.rpc('increment_user_items', { user_id: user.id }).catch(() => {});
+      const { error: rpcError } = await supabase.rpc('increment_user_items', { user_id: user.id });
 
       setCreatedItemId(data.id);
       setGeneratedQr(data.qr_code);
