@@ -316,7 +316,7 @@ export default function ChatPage() {
         const geo = await reverseGeocode(lat, lng);
         const locationName = geo?.short_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-        const locationMsg = {
+        const locationMsg: any = {
           session_id: session.id,
           sender_role: isOwner ? 'owner' : 'finder',
           message_type: 'location',
@@ -326,7 +326,7 @@ export default function ChatPage() {
           location_name: locationName,
         };
 
-        const sysMsg = {
+        const sysMsg: any = {
           session_id: session.id,
           sender_role: 'system',
           message_type: 'system',
