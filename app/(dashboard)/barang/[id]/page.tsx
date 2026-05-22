@@ -10,25 +10,25 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   if (isDemo) {
     const mockItem = {
-      id: params.id,
+      id: id,
       user_id: 'demo123',
-      item_name: params.id === '1' ? 'MacBook Pro M2' : params.id === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-      item_category: params.id === '1' ? 'elektronik' : params.id === '2' ? 'dompet' : 'kunci',
-      qr_code: `BALIK-DEMO-${params.id}`,
-      status: params.id === '1' ? 'active' : params.id === '2' ? 'lost' : 'returned',
+      item_name: id === '1' ? 'MacBook Pro M2' : id === '2' ? 'Dompet Kulit' : 'Kunci Motor',
+      item_category: id === '1' ? 'elektronik' : id === '2' ? 'dompet' : 'kunci',
+      qr_code: `BALIK-DEMO-${id}`,
+      status: id === '1' ? 'active' : id === '2' ? 'lost' : 'returned',
       is_active: true,
       created_at: new Date().toISOString(),
       contact_preference: 'both',
-      reward_offered: params.id === '2',
-      reward_amount: params.id === '2' ? 50000 : null,
-      reward_message: params.id === '2' ? 'Tolong kembalikan' : null,
-      total_scans: params.id === '1' ? 0 : 3
+      reward_offered: id === '2',
+      reward_amount: id === '2' ? 50000 : null,
+      reward_message: id === '2' ? 'Tolong kembalikan' : null,
+      total_scans: id === '1' ? 0 : 3
     };
 
-    const mockSessions = params.id === '1' ? [] : [
+    const mockSessions = id === '1' ? [] : [
       {
         id: 'session-1',
-        item_id: params.id,
+        item_id: id,
         session_token: 'token123',
         finder_location_name: 'Gedung B UAJY',
         status: 'open',
@@ -46,7 +46,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const { data: item } = await supabase
     .from('items')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .single();
 
