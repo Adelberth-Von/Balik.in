@@ -7,7 +7,12 @@ export const metadata = { title: 'Notifikasi — Balik.In' };
 
 export default async function NotifikasiPage() {
   const cookieStore = await cookies();
-  const isDemo = cookieStore.get('demo_mode')?.value === 'true';
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isDemoCookie = cookieStore.get('demo_mode')?.value === 'true';
+  const isAdmin = user?.email === 'admin@balik.in';
+  const isDemo = isDemoCookie || isAdmin;
 
   if (isDemo) {
     return <NotifikasiClient notifications={[
@@ -15,8 +20,6 @@ export default async function NotifikasiPage() {
     ]} userId="demo123" />;
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const { data: notifications } = await supabase
