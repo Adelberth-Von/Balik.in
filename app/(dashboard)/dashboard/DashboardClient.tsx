@@ -49,7 +49,9 @@ export default function DashboardClient({ profile, items, sessions, notification
             status: 'active',
             is_active: true,
             reward_offered: true,
-            reward_amount: 500000
+            reward_amount: 500000,
+            contact_preference: 'chat',
+            total_scans: 0
           },
           { 
             user_id: userId, 
@@ -60,7 +62,9 @@ export default function DashboardClient({ profile, items, sessions, notification
             status: 'active',
             is_active: true,
             reward_offered: true,
-            reward_amount: 100000
+            reward_amount: 100000,
+            contact_preference: 'both',
+            total_scans: 0
           },
           { 
             user_id: userId, 
@@ -70,7 +74,9 @@ export default function DashboardClient({ profile, items, sessions, notification
             qr_code: 'KEY-11223',
             status: 'active',
             is_active: true,
-            reward_offered: false
+            reward_offered: false,
+            contact_preference: 'whatsapp',
+            total_scans: 0
           }
         ]);
         

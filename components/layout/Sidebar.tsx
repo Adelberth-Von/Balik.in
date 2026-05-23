@@ -77,11 +77,16 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Selalu hapus cache dan kembalikan ke home meskipun Supabase error
-      localStorage.removeItem('supabase.auth.token');
+      // Nuke semua cookies secara paksa agar server tidak mengira masih login
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      localStorage.clear();
       sessionStorage.clear();
       toast.success('Berhasil keluar');
-      window.location.href = '/'; // Gunakan window.location agar full reload dan clear cache
+      window.location.href = '/'; 
     }
   };
 
