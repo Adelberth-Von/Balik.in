@@ -24,6 +24,39 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
   const [email, setEmail] = useState(initialProfile?.email || '');
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Maksimal ukuran foto adalah 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 300;
+        let { width, height } = img;
+        if (width > height && width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setFormData(p => ({ ...p, avatar_url: dataUrl }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem('darkMode');
     setIsDark(saved !== 'false');
@@ -104,6 +137,12 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
                 {initialProfile?.full_name?.charAt(0).toUpperCase() || 'U'}
               </div>
             </div>
+          )}
+          {isEditing && (
+            <label className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-primary-700 transition-colors shadow-lg">
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              <span className="text-xl font-medium leading-none pb-1">+</span>
+            </label>
           )}
         </div>
 
@@ -197,13 +236,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <label className={labelClass}>URL Foto Profil (Opsional)</label>
-            <div className="relative">
-              <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input disabled={!isEditing} type="url" value={formData.avatar_url} onChange={(e) => setFormData(p => ({ ...p, avatar_url: e.target.value }))} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} placeholder="https://contoh.com/foto.jpg" />
-            </div>
-          </div>
+          {/* Removed Avatar URL Field since we have file upload above */}
         </div>
 
         <div className="pt-4 flex items-center justify-between">
@@ -227,7 +260,13 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
                 Batal
               </button>
               <button
-                onClick={handleSave} disabled={saving || isDemo}
+                onClick={() => {
+                  if (isDemo) {
+                    toast.error('Mode demo tidak bisa menyimpan perubahan');
+                    return;
+                  }
+                  handleSave();
+                }} disabled={saving || isDemo}
                 className="bg-primary-600 dark:bg-white text-white dark:text-black font-semibold rounded-xl px-6 py-2.5 hover:bg-primary-700 dark:hover:bg-zinc-200 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
               >
                 {saving ? 'Menyimpan...' : <><Save size={16} /> Simpan Perubahan</>}
