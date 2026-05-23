@@ -14,6 +14,7 @@ import { useChatRealtime } from '@/lib/hooks/useRealtime';
 import { formatTime } from '@/lib/utils/formatters';
 import { reverseGeocode } from '@/lib/utils/geocoding';
 import dynamic from 'next/dynamic';
+import toast from 'react-hot-toast';
 
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
@@ -492,6 +493,30 @@ export default function ChatPage() {
 
   const handleConfirmReturn = async () => {
     if (!session) return;
+    if (sessionToken.startsWith('tok_') || isDemoQr(qrCode)) {
+      const systemMsg: ChatMessage = {
+        id: `m-return-${Date.now()}`,
+        session_id: sessionToken,
+        sender_role: 'system',
+        message_type: 'system',
+        message: isOwner
+          ? 'Pemilik mengkonfirmasi barang sudah kembali'
+          : 'Penemu mengkonfirmasi barang sudah dikembalikan',
+        is_read: true,
+        created_at: new Date().toISOString(),
+      };
+
+      setSession((prev) => (prev ? { ...prev, status: 'returned' } : prev));
+      setMessages((prev) => [...prev, systemMsg]);
+      fetch('/api/demo', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'ADD_MESSAGE', payload: systemMsg }),
+      }).catch(() => {});
+      setShowConfirmReturn(false);
+      setShowRating(true);
+      return;
+    }
+
     const field = isOwner ? 'owner_confirmed_return' : 'finder_confirmed_return';
     await supabase.from('scan_sessions').update({ [field]: true }).eq('id', session.id);
 
@@ -524,6 +549,12 @@ export default function ChatPage() {
 
   const handleRating = async () => {
     if (!session) return;
+    if (sessionToken.startsWith('tok_') || isDemoQr(qrCode)) {
+      toast.success('Rating prototype tersimpan.');
+      setShowRating(false);
+      return;
+    }
+
     const field = isOwner ? 'owner_rating' : 'finder_rating';
     const feedbackField = isOwner ? 'owner_feedback' : 'finder_feedback';
     await supabase
@@ -602,7 +633,7 @@ export default function ChatPage() {
       </div>
 
       {/* MESSAGES */}
-      <div className="scrollbar-stable flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
+      <div className="scrollbar-stable flex-1 min-h-0 overflow-y-scroll px-3 sm:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} isOwner={isOwner} />
         ))}

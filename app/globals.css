@@ -61,7 +61,12 @@
   }
 
   .scrollbar-stable::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
+  }
+
+  .scrollbar-stable::-webkit-scrollbar-track {
+    background: rgba(39, 39, 42, 0.35);
+    border-radius: 9999px;
   }
 
   .scrollbar-stable::-webkit-scrollbar-thumb {

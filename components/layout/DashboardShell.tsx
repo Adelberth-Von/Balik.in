@@ -31,11 +31,13 @@ export default function DashboardShell({
       <button
         type="button"
         onClick={() => setSidebarHidden((value) => !value)}
-        className="fixed left-3 top-24 z-50 hidden h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-300 shadow-lg transition-colors hover:bg-zinc-900 hover:text-white md:flex"
+        className={`fixed top-1/2 z-50 hidden h-11 w-8 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-zinc-800 bg-zinc-950/95 text-zinc-300 shadow-lg backdrop-blur transition-[left,background-color,color] duration-300 hover:bg-zinc-900 hover:text-white md:flex ${
+          sidebarHidden ? 'left-0' : 'left-64'
+        }`}
         aria-label={sidebarHidden ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
         title={sidebarHidden ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
       >
-        {sidebarHidden ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        {sidebarHidden ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
       </button>
 
       <main
