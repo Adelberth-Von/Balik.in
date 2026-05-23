@@ -35,8 +35,26 @@ export default function Navbar() {
   const handleDemoLogin = async () => {
     setDemoLoading(true);
     try {
-      document.cookie = "demo_mode=true; path=/";
-      toast.success('🎮 Mode Demo aktif!');
+      const demoEmail = 'admin@balik.in';
+      const demoPassword = 'admin1234';
+      const { error } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPassword });
+      
+      if (error && (error.message === 'Invalid login credentials' || error.message.includes('Invalid'))) {
+        const { error: regError } = await supabase.auth.signUp({ 
+          email: demoEmail, 
+          password: demoPassword,
+          options: { data: { full_name: 'Admin Balik.in' } }
+        });
+        if (!regError) {
+          toast.success('🎮 Masuk Mode Demo (Admin)!');
+          router.push('/dashboard');
+          return;
+        }
+      } else if (error) {
+        throw error;
+      }
+      
+      toast.success('🎮 Masuk Mode Demo (Admin)!');
       router.push('/dashboard');
     } catch {
       toast.error('Demo tidak tersedia saat ini');
