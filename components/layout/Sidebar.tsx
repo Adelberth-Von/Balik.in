@@ -71,10 +71,18 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
   }, []);
 
   const handleSignOut = async () => {
-    document.cookie = "demo_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    await supabase.auth.signOut();
-    toast.success('Berhasil keluar');
-    router.push('/');
+    try {
+      document.cookie = "demo_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Selalu hapus cache dan kembalikan ke home meskipun Supabase error
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+      toast.success('Berhasil keluar');
+      window.location.href = '/'; // Gunakan window.location agar full reload dan clear cache
+    }
   };
 
   return (
