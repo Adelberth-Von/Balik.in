@@ -150,6 +150,11 @@ CREATE POLICY "Allow public select chat_messages"
   ON chat_messages FOR SELECT TO public 
   USING (true);
 
+-- Allow public update chat_messages (needed for read receipts)
+CREATE POLICY "Allow public update chat_messages" 
+  ON chat_messages FOR UPDATE TO public 
+  USING (true);
+
 -- Allow system to insert notifications
 CREATE POLICY "Allow public insert to notifications" 
   ON notifications FOR INSERT TO public 

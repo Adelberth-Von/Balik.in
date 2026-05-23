@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Map, MapPin, Package, Clock } from 'lucide-react';
 import type { ScanSession, Item } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
+import { useMapRealtime } from '@/lib/hooks/useRealtime';
 
 const MapViewLeaflet = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
@@ -32,13 +33,32 @@ export default function PetaClient({ sessions }: { sessions: SessionWithItem[] }
     setLocalSessions(sessions);
   }, [sessions]);
 
-  // Real-time map updates
+  // Real-time map updates via hook
+  useMapRealtime((updatedSession) => {
+    setLocalSessions((prev) => {
+      const idx = prev.findIndex(s => s.id === updatedSession.id);
+      if (idx === -1) return prev;
+      
+      const newSessions = [...prev];
+      newSessions[idx] = {
+        ...newSessions[idx],
+        finder_latitude: updatedSession.finder_latitude,
+        finder_longitude: updatedSession.finder_longitude,
+        finder_location_name: updatedSession.finder_location_name,
+      };
+      
+      // Update selected session if it's the one currently viewed
+      if (selectedSession?.id === updatedSession.id) {
+        setSelectedSession(newSessions[idx]);
+      }
+      
+      return newSessions;
+    });
+  });
+
   useEffect(() => {
     const isDemo = sessions.some(s => s.items?.qr_code?.startsWith('BALIK-DEMO-'));
-    if (!isDemo) {
-      const interval = setInterval(() => router.refresh(), 5000);
-      return () => clearInterval(interval);
-    }
+    if (!isDemo) return;
 
     // Demo Mode Sync
     const interval = setInterval(async () => {

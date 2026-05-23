@@ -8,11 +8,15 @@ type RealtimeCallback<T> = (payload: T) => void;
 
 export function useChatRealtime(
   sessionId: string | null,
-  onNewMessage: RealtimeCallback<ChatMessage>
+  onNewMessage: RealtimeCallback<ChatMessage>,
+  onMessageUpdate?: RealtimeCallback<ChatMessage>
 ) {
   const supabase = createClient();
-  const callbackRef = useRef(onNewMessage);
-  callbackRef.current = onNewMessage;
+  const insertCallbackRef = useRef(onNewMessage);
+  insertCallbackRef.current = onNewMessage;
+  
+  const updateCallbackRef = useRef(onMessageUpdate);
+  updateCallbackRef.current = onMessageUpdate;
 
   useEffect(() => {
     if (!sessionId) return;
@@ -28,7 +32,21 @@ export function useChatRealtime(
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          callbackRef.current(payload.new as ChatMessage);
+          insertCallbackRef.current(payload.new as ChatMessage);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          if (updateCallbackRef.current) {
+            updateCallbackRef.current(payload.new as ChatMessage);
+          }
         }
       )
       .subscribe();
@@ -105,4 +123,36 @@ export function useSessionsRealtime(
       supabase.removeChannel(channel);
     };
   }, [itemIds.join(','), supabase]);
+}
+
+export function useMapRealtime(
+  onLocationUpdate: RealtimeCallback<{ id: string; finder_latitude: number; finder_longitude: number; finder_location_name: string }>
+) {
+  const supabase = createClient();
+  const callbackRef = useRef(onLocationUpdate);
+  callbackRef.current = onLocationUpdate;
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('map-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'scan_sessions',
+        },
+        (payload) => {
+          const session = payload.new as { id: string; finder_latitude: number; finder_longitude: number; finder_location_name: string };
+          if (session.finder_latitude && session.finder_longitude) {
+            callbackRef.current(session);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 }

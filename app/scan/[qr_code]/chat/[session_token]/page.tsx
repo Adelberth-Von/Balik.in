@@ -163,14 +163,20 @@ export default function ChatPage() {
     setLoading(false);
   };
 
-  // Real-time new messages
-  useChatRealtime(session?.id || null, (newMsg) => {
-    setMessages((prev) => {
-      if (prev.find((m) => m.id === newMsg.id)) return prev;
-      return [...prev, newMsg];
-    });
-    setIsTyping(false);
-  });
+  // Real-time new messages and updates
+  useChatRealtime(
+    session?.id || null, 
+    (newMsg) => {
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
+      setIsTyping(false);
+    },
+    (updatedMsg) => {
+      setMessages((prev) => prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)));
+    }
+  );
 
   // LocalStorage sync for Demo Mode
   useEffect(() => {
