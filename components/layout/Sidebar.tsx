@@ -72,17 +72,12 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
 
   const handleSignOut = async () => {
     try {
-      document.cookie = "demo_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      await supabase.auth.signOut();
+      // Call server action to guarantee HttpOnly cookies are cleared
+      const { logoutAction } = await import('@/app/actions/auth');
+      await logoutAction();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Nuke semua cookies secara paksa agar server tidak mengira masih login
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, "")
-          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
       localStorage.clear();
       sessionStorage.clear();
       toast.success('Berhasil keluar');

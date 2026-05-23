@@ -40,11 +40,11 @@ export default function DashboardClient({ profile, items, sessions, notification
       
       try {
         toast.loading('Menyiapkan data presentasi...', { id: 'dummyData' });
-        
         const timestamp = Date.now().toString(36).toUpperCase();
         
         const dummyItems = [
           { 
+            id: `temp-${timestamp}-1`,
             user_id: userId, 
             item_name: 'MacBook Pro M2', 
             item_category: 'elektronik', 
@@ -55,9 +55,12 @@ export default function DashboardClient({ profile, items, sessions, notification
             reward_offered: true,
             reward_amount: 500000,
             contact_preference: 'chat',
-            total_scans: 0
+            total_scans: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
           { 
+            id: `temp-${timestamp}-2`,
             user_id: userId, 
             item_name: 'Dompet Kulit Hitam', 
             item_category: 'dompet', 
@@ -68,9 +71,12 @@ export default function DashboardClient({ profile, items, sessions, notification
             reward_offered: true,
             reward_amount: 100000,
             contact_preference: 'both',
-            total_scans: 0
+            total_scans: 0,
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            updated_at: new Date(Date.now() - 86400000).toISOString()
           },
           { 
+            id: `temp-${timestamp}-3`,
             user_id: userId, 
             item_name: 'Kunci Mobil Pajero', 
             item_category: 'kunci', 
@@ -80,11 +86,17 @@ export default function DashboardClient({ profile, items, sessions, notification
             is_active: true,
             reward_offered: false,
             contact_preference: 'whatsapp',
-            total_scans: 0
+            total_scans: 0,
+            created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+            updated_at: new Date(Date.now() - 86400000 * 2).toISOString()
           }
         ];
 
-        const { data: insertedItems, error: itemsError } = await supabase.from('items').insert(dummyItems).select();
+        // Langsung tampilkan di UI secara instan!
+        setLiveItems(dummyItems as any);
+
+        // Kemudian simpan ke DB secara diam-diam
+        const { error: itemsError } = await supabase.from('items').insert(dummyItems.map(({id, created_at, updated_at, ...rest}) => rest));
         
         if (itemsError) throw itemsError;
         
