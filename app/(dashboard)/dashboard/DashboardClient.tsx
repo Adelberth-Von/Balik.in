@@ -29,6 +29,8 @@ export default function DashboardClient({ profile, items, sessions, notification
   const [isInjecting, setIsInjecting] = useState(false);
   const today = formatLongDate(new Date().toISOString());
 
+  const [liveItems, setLiveItems] = useState<Item[]>(items);
+
   useEffect(() => {
     const injectDummyData = async () => {
       if (profile?.email !== 'admin@balik.in' || items.length > 0 || isInjecting) return;
@@ -39,13 +41,15 @@ export default function DashboardClient({ profile, items, sessions, notification
       try {
         toast.loading('Menyiapkan data presentasi...', { id: 'dummyData' });
         
-        const { error: itemsError } = await supabase.from('items').insert([
+        const timestamp = Date.now().toString(36).toUpperCase();
+        
+        const dummyItems = [
           { 
             user_id: userId, 
             item_name: 'MacBook Pro M2', 
             item_category: 'elektronik', 
             item_description: 'Laptop kerja dengan stiker Balik.in',
-            qr_code: 'MAC-12345',
+            qr_code: `MAC-${timestamp}`,
             status: 'active',
             is_active: true,
             reward_offered: true,
@@ -58,7 +62,7 @@ export default function DashboardClient({ profile, items, sessions, notification
             item_name: 'Dompet Kulit Hitam', 
             item_category: 'dompet', 
             item_description: 'Berisi KTP dan kartu penting',
-            qr_code: 'WLT-67890',
+            qr_code: `WLT-${timestamp}`,
             status: 'active',
             is_active: true,
             reward_offered: true,
@@ -71,19 +75,24 @@ export default function DashboardClient({ profile, items, sessions, notification
             item_name: 'Kunci Mobil Pajero', 
             item_category: 'kunci', 
             item_description: 'Gantungan kunci kulit coklat',
-            qr_code: 'KEY-11223',
+            qr_code: `KEY-${timestamp}`,
             status: 'active',
             is_active: true,
             reward_offered: false,
             contact_preference: 'whatsapp',
             total_scans: 0
           }
-        ]);
+        ];
+
+        const { data: insertedItems, error: itemsError } = await supabase.from('items').insert(dummyItems).select();
         
         if (itemsError) throw itemsError;
         
+        if (insertedItems && insertedItems.length > 0) {
+          setLiveItems(insertedItems as any);
+        }
+        
         toast.success('Data presentasi siap!', { id: 'dummyData' });
-        window.location.reload();
       } catch (error: any) {
         console.error('Failed to inject dummy data:', error);
         toast.error(`Gagal memuat data: ${error?.message || 'Error tidak diketahui'}`, { id: 'dummyData', duration: 5000 });
@@ -99,16 +108,16 @@ export default function DashboardClient({ profile, items, sessions, notification
     setLiveNotifications((prev) => [notif, ...prev]);
   });
 
-  const activeItems = items.filter((i) => i.is_active);
+  const activeItems = liveItems.filter((i) => i.is_active);
   const scansThisMonth = sessions.filter((s) => {
     const d = new Date(s.created_at);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
   const unreadMessages = sessions.filter((s) => !s.is_read_by_owner && s.status === 'open').length;
-  const returned = items.filter((i) => i.status === 'returned').length;
+  const returned = liveItems.filter((i) => i.status === 'returned').length;
   const newScans = sessions.filter((s) => !s.is_read_by_owner).length;
-  const lostItems = items.filter((i) => i.status === 'lost').length;
+  const lostItems = liveItems.filter((i) => i.status === 'lost').length;
 
   const stats = [
     { label: 'QR Aktif', value: activeItems.length, icon: QrCode, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
@@ -307,7 +316,7 @@ export default function DashboardClient({ profile, items, sessions, notification
           </div>
           
           <div className="space-y-2">
-            {items.slice(0, 5).length === 0 ? (
+            {liveItems.slice(0, 5).length === 0 ? (
               <div className="py-12 px-6 text-center bg-zinc-900/30 border border-white/5 rounded-2xl">
                 <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Package size={20} className="text-zinc-500" />
@@ -315,7 +324,7 @@ export default function DashboardClient({ profile, items, sessions, notification
                 <p className="text-zinc-400 text-sm">Inventaris masih kosong.</p>
               </div>
             ) : (
-              items.slice(0, 5).map((item) => {
+              liveItems.slice(0, 5).map((item) => {
                 const statusInfo = STATUS_CONFIG[item.status];
                 return (
                   <Link
