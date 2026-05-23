@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils/cn';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 import { useEffect } from 'react';
+import { mergePrototypeItems } from '@/lib/utils/demo-items';
 
 interface Props {
   profile: User | null;
@@ -29,6 +30,10 @@ export default function DashboardClient({ profile, items, sessions, notification
   const today = formatLongDate(new Date().toISOString());
 
   const [liveItems, setLiveItems] = useState<Item[]>(items);
+
+  useEffect(() => {
+    setLiveItems(mergePrototypeItems(items));
+  }, [items]);
 
   useNotificationsRealtime(userId, (notif) => {
     setLiveNotifications((prev) => [notif, ...prev]);

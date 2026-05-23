@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import DemoBanner from '@/components/layout/DemoBanner';
 import ForceTheme from '@/components/layout/ForceTheme';
 import DashboardShell from '@/components/layout/DashboardShell';
 
@@ -22,8 +21,7 @@ export default async function DashboardLayout({
     return (
       <>
         <ForceTheme mode="auto" />
-        <DemoBanner />
-        <DashboardShell unreadCount={2} unreadMessages={1}>{children}</DashboardShell>
+        <DashboardShell unreadCount={2} unreadMessages={1} isDemo>{children}</DashboardShell>
       </>
     );
   }
@@ -51,8 +49,7 @@ export default async function DashboardLayout({
   return (
     <>
       <ForceTheme mode="auto" />
-      {isDemoUser && <DemoBanner />}
-      <DashboardShell unreadCount={unreadNotifs || 0} unreadMessages={unreadMsgs || 0}>
+      <DashboardShell unreadCount={unreadNotifs || 0} unreadMessages={unreadMsgs || 0} isDemo={isDemoUser}>
         {children}
       </DashboardShell>
     </>

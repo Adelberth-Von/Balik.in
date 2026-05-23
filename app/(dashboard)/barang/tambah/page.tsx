@@ -16,6 +16,7 @@ import type { ItemCategory } from '@/lib/types';
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { savePrototypeItem } from '@/lib/utils/demo-items';
 
 const CATEGORIES: { value: ItemCategory; icon: React.ReactNode; label: string }[] = [
   { value: 'elektronik', icon: <Zap size={18} />, label: 'Elektronik' },
@@ -80,6 +81,22 @@ export default function TambahBarangPage() {
       if (isDemo) {
         const demoId = `demo-${Date.now()}`;
         const qrCode = `BALIK-DEMO-${demoId}`;
+        savePrototypeItem({
+          id: demoId,
+          user_id: 'demo123',
+          item_name: itemName,
+          item_category: category,
+          item_description: description || null,
+          qr_code: qrCode,
+          status: 'active',
+          is_active: isActive,
+          contact_preference: contactPref,
+          reward_offered: rewardOffered,
+          reward_message: rewardOffered ? rewardMessage : null,
+          reward_amount: rewardOffered && rewardAmount ? parseInt(rewardAmount) : null,
+          total_scans: 0,
+          created_at: new Date().toISOString(),
+        } as any);
 
         setCreatedItemId(demoId);
         setGeneratedQr(qrCode);
@@ -129,6 +146,22 @@ export default function TambahBarangPage() {
     } catch (err) {
       const demoId = `proto-${Date.now()}`;
       const qrCode = `BALIK-DEMO-${demoId}`;
+      savePrototypeItem({
+        id: demoId,
+        user_id: 'demo123',
+        item_name: itemName,
+        item_category: category,
+        item_description: description || null,
+        qr_code: qrCode,
+        status: 'active',
+        is_active: isActive,
+        contact_preference: contactPref,
+        reward_offered: rewardOffered,
+        reward_message: rewardOffered ? rewardMessage : null,
+        reward_amount: rewardOffered && rewardAmount ? parseInt(rewardAmount) : null,
+        total_scans: 0,
+        created_at: new Date().toISOString(),
+      } as any);
       setCreatedItemId(demoId);
       setGeneratedQr(qrCode);
       setStep(2);

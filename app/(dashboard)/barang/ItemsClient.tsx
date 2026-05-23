@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Plus, Search, Grid, List, Package, QrCode, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Item, ItemCategory, ItemStatus } from '@/lib/types';
 import { STATUS_CONFIG } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
+import { mergePrototypeItems } from '@/lib/utils/demo-items';
 
 const CATEGORIES: { value: ItemCategory | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua Kategori' },
@@ -31,6 +32,7 @@ const STATUSES: { value: ItemStatus | 'all'; label: string }[] = [
 ];
 
 export default function ItemsClient({ items }: { items: Item[] }) {
+  const [localItems, setLocalItems] = useState(items);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ItemCategory | 'all'>('all');
   const [status, setStatus] = useState<ItemStatus | 'all'>('all');
@@ -38,7 +40,11 @@ export default function ItemsClient({ items }: { items: Item[] }) {
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 6; // Set to 6 so it's easier to see pagination with dummy data
 
-  const filtered = items.filter((item) => {
+  useEffect(() => {
+    setLocalItems(mergePrototypeItems(items));
+  }, [items]);
+
+  const filtered = localItems.filter((item) => {
     const matchSearch = item.item_name.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'all' || item.item_category === category;
     const matchStatus = status === 'all' || item.status === status;
@@ -59,7 +65,7 @@ export default function ItemsClient({ items }: { items: Item[] }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Barang Saya</h1>
-          <p className="text-zinc-400 text-sm mt-0.5">{items.length} barang terdaftar</p>
+          <p className="text-zinc-400 text-sm mt-0.5">{localItems.length} barang terdaftar</p>
         </div>
         <Link href="/barang/tambah" className="btn-primary !py-2 !px-4 flex items-center gap-1.5 text-sm">
           <Plus size={16} /> Tambah Barang
@@ -121,14 +127,14 @@ export default function ItemsClient({ items }: { items: Item[] }) {
             <Package size={24} className="text-zinc-500" />
           </div>
           <h3 className="font-semibold text-white mb-1">
-            {items.length === 0 ? 'Belum ada barang terdaftar' : 'Tidak ada barang yang cocok'}
+            {localItems.length === 0 ? 'Belum ada barang terdaftar' : 'Tidak ada barang yang cocok'}
           </h3>
           <p className="text-zinc-500 text-sm mb-6 max-w-xs">
-            {items.length === 0
+            {localItems.length === 0
               ? 'Daftarkan barang pertamamu dan dapatkan QR code unik untuk proteksi ekstra.'
               : 'Coba ubah filter pencarian untuk menemukan barang yang dimaksud.'}
           </p>
-          {items.length === 0 && (
+          {localItems.length === 0 && (
             <Link href="/barang/tambah" className="btn-primary !py-2 !px-5 text-sm">
               + Daftarkan Barang Pertama
             </Link>

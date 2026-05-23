@@ -4,15 +4,18 @@ import { useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
+import DemoBanner from '@/components/layout/DemoBanner';
 
 export default function DashboardShell({
   children,
   unreadCount,
   unreadMessages,
+  isDemo = false,
 }: {
   children: React.ReactNode;
   unreadCount: number;
   unreadMessages: number;
+  isDemo?: boolean;
 }) {
   const [sidebarHidden, setSidebarHidden] = useState(false);
 
@@ -45,7 +48,8 @@ export default function DashboardShell({
           sidebarHidden ? 'md:ml-0' : 'md:ml-64'
         }`}
       >
-        <div className="pb-20 md:pb-0">{children}</div>
+        {isDemo && <DemoBanner />}
+        <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
       </main>
 
       <BottomNav unreadCount={unreadCount} unreadMessages={unreadMessages} />

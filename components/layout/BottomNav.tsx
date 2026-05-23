@@ -61,7 +61,7 @@ export default function BottomNav({
   }, []);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <div className="flex items-center justify-around px-1">
         {NAV_ITEMS.map((item) => {
           const isActive =
@@ -79,7 +79,7 @@ export default function BottomNav({
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-col items-center justify-center flex-1 py-3.5 gap-1 transition-colors"
+              className="relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 py-2.5 transition-colors"
             >
               {/* Active indicator top line */}
               {isActive && (
@@ -101,7 +101,7 @@ export default function BottomNav({
               </div>
               <span
                 className={cn(
-                  'text-[9px] font-medium leading-none mt-1',
+                  'mt-1 max-w-full truncate text-[9px] font-medium leading-none',
                   isActive ? 'text-white' : 'text-zinc-500'
                 )}
               >

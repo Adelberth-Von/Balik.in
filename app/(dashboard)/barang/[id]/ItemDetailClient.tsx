@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, QrCode, History, MessageSquare, Info, Download, Copy, MapPin, Package, Clock, Eye, CheckCircle } from 'lucide-react';
 import type { Item, ScanSession } from '@/lib/types';
@@ -13,6 +13,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { readPrototypeItems, removePrototypeItem, savePrototypeItem } from '@/lib/utils/demo-items';
 
 const TABS = [
   { id: 'info', label: 'Info', icon: Info },
@@ -24,6 +25,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'qr' ? 'qr' : 'info';
+  const [currentItem, setCurrentItem] = useState(item);
   const [tab, setTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -39,9 +41,25 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
     reward_message: item.reward_message || '',
   });
   const supabase = createClient();
-  const catInfo = CATEGORY_CONFIG[item.item_category];
-  const statusInfo = STATUS_CONFIG[item.status];
-  const qrUrl = getQrUrl(item.qr_code);
+  const catInfo = CATEGORY_CONFIG[currentItem.item_category];
+  const statusInfo = STATUS_CONFIG[currentItem.status];
+  const qrUrl = getQrUrl(currentItem.qr_code);
+
+  useEffect(() => {
+    const storedItem = readPrototypeItems().find((candidate) => candidate.id === item.id);
+    if (!storedItem) return;
+    setCurrentItem(storedItem);
+    setEditData({
+      item_name: storedItem.item_name,
+      item_category: storedItem.item_category,
+      item_description: storedItem.item_description || '',
+      status: storedItem.status,
+      contact_preference: storedItem.contact_preference,
+      reward_offered: storedItem.reward_offered,
+      reward_amount: storedItem.reward_amount || 0,
+      reward_message: storedItem.reward_message || '',
+    });
+  }, [item.id]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(qrUrl);
@@ -55,7 +73,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
       if (!el) return;
       const dataUrl = await toPng(el, { pixelRatio: 3 });
       const a = document.createElement('a');
-      a.download = `balik-in-${item.qr_code}.png`;
+      a.download = `balik-in-${currentItem.qr_code}.png`;
       a.href = dataUrl;
       a.click();
       toast.success('QR berhasil didownload!');
@@ -67,13 +85,16 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
   const handleUpdate = async () => {
     setIsSaving(true);
     try {
-      if (item.user_id === 'demo123' || item.qr_code.startsWith('BALIK-DEMO-')) {
+      if (currentItem.user_id === 'demo123' || currentItem.qr_code.startsWith('BALIK-DEMO-')) {
+        const updatedItem = { ...currentItem, ...editData };
+        savePrototypeItem(updatedItem);
+        setCurrentItem(updatedItem);
         toast.success('Barang demo berhasil diperbarui!');
         setIsEditing(false);
         return;
       }
 
-      const { error } = await supabase.from('items').update(editData).eq('id', item.id);
+      const { error } = await supabase.from('items').update(editData).eq('id', currentItem.id);
       if (error) throw error;
       toast.success('Barang berhasil diperbarui!');
       setIsEditing(false);
@@ -89,7 +110,14 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
     if (!window.confirm('Yakin ingin menghapus barang ini secara permanen?')) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('items').delete().eq('id', item.id);
+      if (currentItem.user_id === 'demo123' || currentItem.qr_code.startsWith('BALIK-DEMO-')) {
+        removePrototypeItem(currentItem.id);
+        toast.success('Barang prototype dihapus!');
+        router.push('/barang');
+        return;
+      }
+
+      const { error } = await supabase.from('items').delete().eq('id', currentItem.id);
       if (error) throw error;
       toast.success('Barang dihapus!');
       router.push('/barang');
@@ -111,8 +139,8 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">{item.item_name}</h1>
-            <p className="text-xs font-mono text-zinc-500">{item.qr_code}</p>
+            <h1 className="text-lg font-bold text-white truncate">{currentItem.item_name}</h1>
+            <p className="text-xs font-mono text-zinc-500">{currentItem.qr_code}</p>
           </div>
           <span className={statusInfo.className}>{statusInfo.label}</span>
         </div>
@@ -120,12 +148,12 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
         {/* Quick Stats Row */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{item.total_scans}</p>
+            <p className="text-2xl font-bold text-white">{currentItem.total_scans}</p>
             <p className="text-xs text-zinc-500 mt-1">Total Scan</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
             <p className="text-sm font-semibold text-white leading-tight">
-              {item.last_scanned_at ? timeAgo(item.last_scanned_at) : '—'}
+              {currentItem.last_scanned_at ? timeAgo(currentItem.last_scanned_at) : '-'}
             </p>
             <p className="text-xs text-zinc-500 mt-1">Terakhir Scan</p>
           </div>
@@ -224,10 +252,10 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                         <Package className="w-6 h-6 text-zinc-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h2 className="font-semibold text-white text-base">{item.item_name}</h2>
+                        <h2 className="font-semibold text-white text-base">{currentItem.item_name}</h2>
                         <p className="text-sm text-zinc-400 mt-0.5">{catInfo.label}</p>
-                        {item.item_description && (
-                          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{item.item_description}</p>
+                        {currentItem.item_description && (
+                          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{currentItem.item_description}</p>
                         )}
                       </div>
                     </div>
@@ -246,20 +274,20 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                   </div>
                   <div className="flex items-center justify-between px-5 py-3.5">
                     <span className="text-sm text-zinc-400">Preferensi Kontak</span>
-                    <span className="text-sm font-medium text-white capitalize">{item.contact_preference}</span>
+                    <span className="text-sm font-medium text-white capitalize">{currentItem.contact_preference}</span>
                   </div>
                   <div className="flex items-center justify-between px-5 py-3.5">
                     <span className="text-sm text-zinc-400">Reward</span>
-                    <span className={`text-sm font-medium ${item.reward_offered ? 'text-amber-400' : 'text-zinc-500'}`}>
-                      {item.reward_offered ? `Rp ${item.reward_amount?.toLocaleString('id-ID') || 'Ada'}` : 'Tidak ada'}
+                    <span className={`text-sm font-medium ${currentItem.reward_offered ? 'text-amber-400' : 'text-zinc-500'}`}>
+                      {currentItem.reward_offered ? `Rp ${currentItem.reward_amount?.toLocaleString('id-ID') || 'Ada'}` : 'Tidak ada'}
                     </span>
                   </div>
                 </div>
 
-                {item.reward_offered && item.reward_message && (
+                {currentItem.reward_offered && currentItem.reward_message && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
                     <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Pesan Reward</p>
-                    <p className="text-sm text-amber-300">{item.reward_message}</p>
+                    <p className="text-sm text-amber-300">{currentItem.reward_message}</p>
                   </div>
                 )}
                 
@@ -288,7 +316,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
               >
                 <QRCodeLib value={qrUrl} size={180} bgColor="#ffffff" fgColor="#09090b" />
                 <div className="mt-3 pt-3 border-t border-zinc-100">
-                  <p className="text-xs text-zinc-500 font-mono">{item.qr_code}</p>
+                  <p className="text-xs text-zinc-500 font-mono">{currentItem.qr_code}</p>
                   <p className="text-[10px] text-zinc-400 mt-0.5">balik.in — Scan untuk kembalikan</p>
                 </div>
               </div>
@@ -381,7 +409,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                   )}
 
                   <Link
-                    href={`/scan/${item.qr_code}/chat/${session.session_token}`}
+                    href={`/scan/${currentItem.qr_code}/chat/${session.session_token}`}
                     className="flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     <MessageSquare size={12} /> Buka Chat

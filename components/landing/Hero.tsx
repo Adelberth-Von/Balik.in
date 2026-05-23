@@ -6,14 +6,14 @@ import { Gamepad2, QrCode, ArrowRight, Sparkles, Shield, MapPin, MessageSquare, 
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center pt-16">
+    <section className="relative flex min-h-[calc(100dvh-2rem)] items-center pt-16">
       {/* Minimalist Background Pattern */}
       <div className="absolute inset-0 bg-white dark:bg-zinc-950 pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
       <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-zinc-400 dark:bg-zinc-800 opacity-20 blur-[100px] pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           {/* Left Content */}
           <div>
             <motion.div
@@ -31,7 +31,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-5xl sm:text-6xl font-bold text-zinc-900 dark:text-white leading-tight mb-6 tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-zinc-900 dark:text-white leading-tight mb-6 tracking-tight"
             >
               Barang
               <br />
@@ -100,12 +100,12 @@ export default function Hero() {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, type: 'spring', stiffness: 100 }}
-            className="hidden lg:flex justify-center"
+            className="flex justify-center"
           >
-            <div className="relative">
+            <div className="relative scale-90 sm:scale-100">
               {/* Phone Frame */}
-              <div className="w-72 bg-white dark:bg-zinc-950 rounded-[2.5rem] border-[8px] border-zinc-900 dark:border-zinc-800 p-2 shadow-2xl">
-                <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[2rem] overflow-hidden h-[520px] border border-zinc-100 dark:border-zinc-800 relative">
+              <div className="w-72 bg-white dark:bg-zinc-950 rounded-[2rem] border-[8px] border-zinc-900 dark:border-zinc-800 p-2 shadow-2xl">
+                <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-[1.5rem] overflow-hidden h-[460px] lg:h-[520px] border border-zinc-100 dark:border-zinc-800 relative">
                   {/* Status Bar */}
                   <div className="bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md px-6 py-4 text-center border-b border-zinc-200 dark:border-zinc-800 z-10 sticky top-0">
                     <div className="flex items-center justify-center gap-2">
