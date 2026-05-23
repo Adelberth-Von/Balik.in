@@ -1,7 +1,55 @@
 let mockSessions: any[] = [];
 let mockMessages: Record<string, any[]> = {};
 
+const defaultSession = {
+  id: 's1',
+  item_id: '2',
+  session_token: 'tok_1',
+  finder_location_name: 'Perpustakaan UAJY',
+  status: 'open',
+  is_read_by_owner: false,
+  created_at: new Date().toISOString(),
+  initial_message: 'Halo, saya menemukan barang ini.',
+  items: {
+    id: '2',
+    user_id: 'demo123',
+    item_name: 'Dompet Kulit',
+    item_category: 'dompet',
+    qr_code: 'BALIK-DEMO-2',
+  },
+};
+
+function ensureDefaults() {
+  if (!mockSessions.some((session) => session.session_token === 'tok_1')) {
+    mockSessions.unshift(defaultSession);
+  }
+
+  if (!mockMessages.tok_1?.length) {
+    mockMessages.tok_1 = [
+      {
+        id: 'm1',
+        session_id: 'tok_1',
+        sender_role: 'system',
+        message_type: 'system',
+        message: 'Sesi chat dimulai',
+        is_read: true,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'm2',
+        session_id: 'tok_1',
+        sender_role: 'finder',
+        message_type: 'text',
+        message: 'Halo, saya menemukan barang ini.',
+        is_read: false,
+        created_at: new Date().toISOString(),
+      },
+    ];
+  }
+}
+
 export async function GET(req: Request) {
+  ensureDefaults();
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token');
   
@@ -13,6 +61,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  ensureDefaults();
   const body = await req.json();
   const { type, payload } = body;
 
@@ -29,7 +78,9 @@ export async function POST(req: Request) {
   if (type === 'ADD_MESSAGE') {
     const token = payload.session_id;
     if (!mockMessages[token]) mockMessages[token] = [];
-    mockMessages[token].push(payload);
+    if (!mockMessages[token].some((message) => message.id === payload.id)) {
+      mockMessages[token].push({ is_read: false, ...payload });
+    }
     
     // Update initial_message in session preview
     const session = mockSessions.find(s => s.session_token === token);

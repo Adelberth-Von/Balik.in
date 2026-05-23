@@ -17,6 +17,14 @@ import dynamic from 'next/dynamic';
 
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
+const isDemoQr = (qrCode: string) => qrCode.startsWith('BALIK-DEMO-');
+
+const normalizeDemoMessages = (messages: ChatMessage[]) =>
+  messages.map((message) => ({
+    ...message,
+    is_read: Boolean(message.is_read),
+  }));
+
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
@@ -61,12 +69,7 @@ export default function ChatPage() {
   }, [messages, scrollToBottom]);
 
   const init = async () => {
-    // Check auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUser({ id: user.id, email: user.email || '' });
-
-    // Fetch session
-    if (qrCode.startsWith('BALIK-DEMO-')) {
+    if (isDemoQr(qrCode)) {
       const demoId = qrCode.replace('BALIK-DEMO-', '');
       const mockItemData = {
         id: demoId,
@@ -95,7 +98,7 @@ export default function ChatPage() {
         const res = await fetch(`/api/demo?token=${sessionToken}`);
         const savedChat = await res.json();
         if (savedChat && savedChat.length > 0) {
-          setMessages(savedChat);
+          setMessages(normalizeDemoMessages(savedChat));
           setLoading(false);
           return;
         }
@@ -112,63 +115,75 @@ export default function ChatPage() {
       }
 
       setMessages([
-        { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', created_at: new Date().toISOString() },
-        { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', created_at: new Date().toISOString() }
+        { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', is_read: true, created_at: new Date().toISOString() },
+        { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', is_read: false, created_at: new Date().toISOString() }
       ] as any);
       
       setLoading(false);
       return;
     }
 
-    const { data: sessionData } = await supabase
-      .from('scan_sessions')
-      .select('*, items(*)')
-      .eq('session_token', sessionToken)
-      .single();
+    try {
+      const authPromise = supabase.auth.getUser();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Koneksi Supabase terlalu lama')), 10000);
+      });
 
-    if (!sessionData) {
-      setLoading(false);
-      return;
-    }
+      const { data: { user } } = await Promise.race([authPromise, timeoutPromise]);
+      if (user) setCurrentUser({ id: user.id, email: user.email || '' });
 
-    setSession(sessionData);
-    const itemData = sessionData.items as Item;
-    setItem(itemData);
-
-    // Determine if viewer is owner
-    if (user && itemData.user_id === user.id) {
-      setIsOwner(true);
-      // Mark as read
-      await supabase
+      const { data: sessionData, error: sessionError } = await supabase
         .from('scan_sessions')
-        .update({ is_read_by_owner: true })
-        .eq('id', sessionData.id);
-    }
+        .select('*, items(*)')
+        .eq('session_token', sessionToken)
+        .single();
 
-    // Fetch messages
-    const { data: msgs } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('session_id', sessionData.id)
-      .order('created_at', { ascending: true });
+      if (sessionError || !sessionData) {
+        setLoading(false);
+        return;
+      }
 
-    if (msgs) setMessages(msgs);
+      setSession(sessionData);
+      const itemData = sessionData.items as Item;
+      setItem(itemData);
 
-    // Mark messages as read if owner
-    if (user && itemData.user_id === user.id) {
-      await supabase
+      // Determine if viewer is owner
+      if (user && itemData.user_id === user.id) {
+        setIsOwner(true);
+        // Mark as read
+        await supabase
+          .from('scan_sessions')
+          .update({ is_read_by_owner: true })
+          .eq('id', sessionData.id);
+      }
+
+      // Fetch messages
+      const { data: msgs } = await supabase
         .from('chat_messages')
-        .update({ is_read: true })
+        .select('*')
         .eq('session_id', sessionData.id)
-        .eq('sender_role', 'finder');
-    }
+        .order('created_at', { ascending: true });
 
-    setLoading(false);
+      if (msgs) setMessages(msgs);
+
+      // Mark messages as read if owner
+      if (user && itemData.user_id === user.id) {
+        await supabase
+          .from('chat_messages')
+          .update({ is_read: true })
+          .eq('session_id', sessionData.id)
+          .eq('sender_role', 'finder');
+      }
+    } catch (error) {
+      console.error('Chat init error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Real-time new messages and updates
   useChatRealtime(
-    session?.id || null, 
+    session && !isDemoQr(qrCode) ? session.id : null, 
     (newMsg) => {
       setMessages((prev) => {
         if (prev.find((m) => m.id === newMsg.id)) return prev;
@@ -183,12 +198,12 @@ export default function ChatPage() {
 
   // LocalStorage sync for Demo Mode
   useEffect(() => {
-    if (!qrCode.startsWith('BALIK-DEMO-')) return;
+    if (!isDemoQr(qrCode)) return;
     
     const handleStorage = (e: StorageEvent) => {
       if (e.key === `baljn_demo_chat_${sessionToken}`) {
         if (e.newValue) {
-          setMessages(JSON.parse(e.newValue));
+          setMessages(normalizeDemoMessages(JSON.parse(e.newValue)));
         }
       }
     };
@@ -201,18 +216,23 @@ export default function ChatPage() {
         try {
           const res = await fetch(`/api/demo?token=${sessionToken}`);
           const parsed = await res.json();
-          if (parsed && parsed.length > messages.length) {
-            setMessages(parsed);
+          if (parsed) {
+            const normalized = normalizeDemoMessages(parsed);
+            setMessages((prev) => {
+              const prevJson = JSON.stringify(prev);
+              const nextJson = JSON.stringify(normalized);
+              return prevJson === nextJson ? prev : normalized;
+            });
           }
         } catch {}
       }
-    }, 1000);
+    }, 700);
     
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
     };
-  }, [qrCode, sessionToken, messages.length]);
+  }, [qrCode, sessionToken]);
 
   // Mark messages as read
   useEffect(() => {
@@ -345,6 +365,7 @@ export default function ChatPage() {
         sender_role: senderRole,
         message_type: 'text',
         message: text,
+        is_read: false,
         created_at: new Date().toISOString(),
       };
 
@@ -536,9 +557,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col max-w-2xl mx-auto">
+    <div className="h-[100dvh] bg-slate-50 dark:bg-slate-900 flex flex-col max-w-2xl mx-auto overflow-hidden">
       {/* TOP BAR - MESSAGING APP STYLE */}
-      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm border-b border-slate-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 shrink-0 z-20 shadow-sm border-b border-slate-100 dark:border-slate-700">
         {isOwner && (
           <button
             onClick={() => router.push('/pesan')}
@@ -575,13 +596,13 @@ export default function ChatPage() {
       </div>
 
       {/* PRIVACY NOTICE */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 flex justify-center items-center gap-2 text-amber-700 dark:text-amber-400 text-xs shadow-sm z-10">
+      <div className="bg-amber-50 dark:bg-amber-900/20 px-3 sm:px-4 py-2 flex justify-center items-center gap-2 text-amber-700 dark:text-amber-400 text-[11px] sm:text-xs shadow-sm shrink-0 z-10">
         <Shield size={14} className="shrink-0" />
         <span className="text-center font-medium">Chat dilindungi enkripsi anonim. Identitas Anda aman.</span>
       </div>
 
       {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} isOwner={isOwner} />
         ))}
@@ -600,7 +621,7 @@ export default function ChatPage() {
 
       {/* CONFIRM RETURN BUTTON */}
       {session.status === 'open' && isOwner && (
-        <div className="px-4 pb-2">
+        <div className="px-3 sm:px-4 pb-2 shrink-0">
           <button
             onClick={() => setShowConfirmReturn(true)}
             className="w-full py-2.5 rounded-xl border-2 border-green-500 text-green-600 dark:text-green-400 text-sm font-semibold hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center justify-center gap-2"
@@ -613,7 +634,7 @@ export default function ChatPage() {
 
       {/* INPUT BAR */}
       {session.status === 'open' && (
-        <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        <div className="p-2 sm:p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
           <input
             ref={galleryInputRef}
             type="file"
@@ -629,11 +650,11 @@ export default function ChatPage() {
             className="hidden"
             onChange={(e) => sendImage(e.target.files?.[0])}
           />
-          <div className="flex items-end gap-2 max-w-2xl mx-auto">
+          <div className="flex items-end gap-1.5 sm:gap-2 max-w-2xl mx-auto">
             <button
               onClick={sendLocation}
               disabled={locationSending}
-              className="p-3 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0 flex items-center justify-center"
               title="Kirim lokasi GPS"
             >
               {locationSending ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
@@ -641,7 +662,7 @@ export default function ChatPage() {
             <button
               onClick={() => galleryInputRef.current?.click()}
               disabled={imageSending}
-              className="p-3 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0 flex items-center justify-center"
               title="Kirim foto"
             >
               {imageSending ? <Loader2 size={20} className="animate-spin" /> : <ImagePlus size={20} />}
@@ -649,12 +670,12 @@ export default function ChatPage() {
             <button
               onClick={() => cameraInputRef.current?.click()}
               disabled={imageSending}
-              className="p-3 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0 flex items-center justify-center"
               title="Buka kamera"
             >
               {imageSending ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
             </button>
-            <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm flex items-center px-4 py-1 min-h-[44px]">
+            <div className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm flex items-center px-3 sm:px-4 py-1 min-h-10 sm:min-h-[44px]">
               <input
                 ref={inputRef}
                 type="text"
@@ -668,7 +689,7 @@ export default function ChatPage() {
             <button
               onClick={sendMessage}
               disabled={!newMessage.trim() || sending}
-              className="p-3 rounded-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white shadow-sm transition-colors shrink-0"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white shadow-sm transition-colors shrink-0 flex items-center justify-center"
             >
               {sending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-1" />}
             </button>

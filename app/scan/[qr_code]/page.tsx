@@ -113,27 +113,27 @@ export default function ScanPage() {
       if (qrCode.startsWith('BALIK-DEMO-')) {
         // Link demo items to their hardcoded tokens in the dashboard mock!
         const demoId = qrCode.replace('BALIK-DEMO-', '');
-        token = demoId === '2' ? 'tok_1' : `tok_${demoId}`;
+        token = demoId === '2' ? 'tok_1' : `tok_demo_${demoId}`;
         
         const initialMessages: any[] = [
-          { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai • ' + new Date().toLocaleString('id-ID'), created_at: new Date().toISOString() },
-          { id: 'm2', session_id: token, sender_role: 'finder', message_type: 'text', message: message, created_at: new Date().toISOString() }
+          { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: `Sesi chat dimulai - ${new Date().toLocaleString('id-ID')}`, is_read: true, created_at: new Date().toISOString() },
+          { id: 'm2', session_id: token, sender_role: 'finder', message_type: 'text', message: message, is_read: false, created_at: new Date().toISOString() }
         ];
 
         if (geo.latitude && geo.longitude) {
           initialMessages.push({
             id: 'm3', session_id: token, sender_role: 'finder', message_type: 'location', message: locationName || 'Lokasi penemu',
-            location_lat: geo.latitude, location_lng: geo.longitude, location_name: locationName, created_at: new Date().toISOString()
+            location_lat: geo.latitude, location_lng: geo.longitude, location_name: locationName, is_read: false, created_at: new Date().toISOString()
           });
         }
 
         const sessionPayload = {
-          id: token, item_id: '2', session_token: token, 
+          id: token, item_id: demoId, session_token: token, 
           finder_latitude: geo.latitude || null,
           finder_longitude: geo.longitude || null,
           finder_location_name: locationName || manualLocation || 'Lokasi Penemu', 
           status: 'open', is_read_by_owner: false, created_at: new Date().toISOString(),
-          items: { id: '2', user_id: 'demo123', item_name: 'Dompet Kulit', item_category: 'dompet', qr_code: qrCode }
+          items: { id: demoId, user_id: 'demo123', item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor', item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci', qr_code: qrCode }
         };
 
         // Sync to Server memory API for Incognito cross-browser demo support!

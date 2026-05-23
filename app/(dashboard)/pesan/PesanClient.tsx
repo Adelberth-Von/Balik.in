@@ -33,11 +33,11 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
     const isDemo = sessions.some(s => s.items?.qr_code?.startsWith('BALIK-DEMO-'));
     if (!isDemo) return;
 
-    const interval = setInterval(async () => {
+    const syncDemoSessions = async () => {
       try {
         const res = await fetch('/api/demo');
         const demoSessions = await res.json();
-        if (demoSessions.length > 0) {
+        if (Array.isArray(demoSessions) && demoSessions.length > 0) {
           // Merge with initial sessions so we don't lose the hardcoded ones if not present
           setLocalSessions(prev => {
             const newSessions = [...prev];
@@ -50,7 +50,10 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
           });
         }
       } catch {}
-    }, 1000);
+    };
+
+    syncDemoSessions();
+    const interval = setInterval(syncDemoSessions, 1000);
     return () => clearInterval(interval);
   }, [sessions]);
 
@@ -86,7 +89,7 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Pesan & Chat</h1>
           <p className="text-zinc-500 text-sm mt-0.5">
-            {sessions.length} percakapan
+            {localSessions.length} percakapan
             {unreadCount > 0 && <span className="text-blue-400 ml-1">· {unreadCount} belum dibaca</span>}
           </p>
         </div>
