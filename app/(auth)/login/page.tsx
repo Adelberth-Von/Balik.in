@@ -31,7 +31,7 @@ export default function LoginPage() {
     try {
       if (email === 'admin@balik.in' && password === 'admin1234') {
         document.cookie = 'demo_mode=true; path=/; max-age=86400';
-        toast.success('Mode Demo aktif!');
+        toast.success('Berhasil masuk!');
         window.location.href = '/dashboard';
         return;
       }

@@ -108,6 +108,7 @@ export interface ChatMessage {
   location_lat?: number;
   location_lng?: number;
   location_name?: string;
+  image_url?: string;
   is_read: boolean;
   created_at: string;
 }

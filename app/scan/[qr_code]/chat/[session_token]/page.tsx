@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, MapPin, ArrowLeft, CheckCircle2, Star, Loader2,
-  QrCode, Shield, X, Check, CheckCheck
+  QrCode, Shield, X, Check, CheckCheck, ImagePlus, Camera
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { CATEGORY_CONFIG } from '@/lib/types';
@@ -39,10 +39,13 @@ export default function ChatPage() {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [locationSending, setLocationSending] = useState(false);
+  const [imageSending, setImageSending] = useState(false);
   const [typingText, setTypingText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -218,6 +221,14 @@ export default function ChatPage() {
     const unreadMessages = messages.filter(m => !m.is_read && m.sender_role !== myRole && m.sender_role !== 'system');
     
     if (unreadMessages.length > 0) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.sender_role !== myRole && m.sender_role !== 'system'
+            ? { ...m, is_read: true }
+            : m
+        )
+      );
+
       if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
         fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) });
       } else {
@@ -230,6 +241,81 @@ export default function ChatPage() {
       }
     }
   }, [messages, session, isOwner, sessionToken, qrCode, supabase]);
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const sendImage = async (file?: File) => {
+    if (!file || !session || imageSending) return;
+    setImageSending(true);
+
+    const senderRole = isOwner ? 'owner' : 'finder';
+    const optimisticId = 'optimistic-image-' + Date.now();
+
+    try {
+      let imageUrl = await fileToDataUrl(file);
+
+      if (!sessionToken.startsWith('tok_') && !qrCode.startsWith('BALIK-DEMO-')) {
+        const ext = file.name.split('.').pop() || 'jpg';
+        const filePath = `${session.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('chat-images')
+          .upload(filePath, file, { upsert: true });
+
+        if (!uploadError) {
+          const { data } = supabase.storage.from('chat-images').getPublicUrl(filePath);
+          imageUrl = data.publicUrl;
+        }
+      }
+
+      const optimistic: ChatMessage = {
+        id: optimisticId,
+        session_id: session.id,
+        sender_role: senderRole,
+        message_type: 'image',
+        message: 'Foto',
+        image_url: imageUrl,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, optimistic]);
+
+      const payload = {
+        session_id: session.id,
+        sender_role: senderRole,
+        message_type: 'image',
+        message: 'Foto',
+        image_url: imageUrl,
+      };
+
+      if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+        await fetch('/api/demo', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'ADD_MESSAGE',
+            payload: { ...payload, id: `m${Date.now()}`, session_id: sessionToken, created_at: new Date().toISOString() },
+          }),
+        });
+      } else {
+        const { data, error } = await supabase.from('chat_messages').insert(payload).select().single();
+        if (error) throw error;
+        setMessages((prev) => prev.map((msg) => (msg.id === optimisticId ? data : msg)));
+      }
+    } catch (error) {
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
+      alert('Gagal mengirim foto');
+    } finally {
+      setImageSending(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+    }
+  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !session || sending) return;
@@ -528,6 +614,21 @@ export default function ChatPage() {
       {/* INPUT BAR */}
       {session.status === 'open' && (
         <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => sendImage(e.target.files?.[0])}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => sendImage(e.target.files?.[0])}
+          />
           <div className="flex items-end gap-2 max-w-2xl mx-auto">
             <button
               onClick={sendLocation}
@@ -536,6 +637,22 @@ export default function ChatPage() {
               title="Kirim lokasi GPS"
             >
               {locationSending ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
+            </button>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={imageSending}
+              className="p-3 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0"
+              title="Kirim foto"
+            >
+              {imageSending ? <Loader2 size={20} className="animate-spin" /> : <ImagePlus size={20} />}
+            </button>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={imageSending}
+              className="p-3 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-primary-600 hover:bg-primary-50 transition-colors shrink-0"
+              title="Buka kamera"
+            >
+              {imageSending ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
             </button>
             <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm flex items-center px-4 py-1 min-h-[44px]">
               <input
@@ -710,6 +827,34 @@ function MessageBubble({ msg, isOwner }: { msg: ChatMessage; isOwner: boolean })
               )}
             </span>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.message_type === 'image' && msg.image_url) {
+    const isMyMessage = isOwner ? msg.sender_role === 'owner' : msg.sender_role === 'finder';
+    return (
+      <div className={`flex flex-col gap-1 w-full ${isMyMessage ? 'items-end' : 'items-start'}`}>
+        <div className={`max-w-[260px] overflow-hidden border shadow-md ${
+          isMyMessage
+            ? 'bg-[#E1FFC7] dark:bg-[#005C4B] rounded-2xl rounded-tr-none border-[#C6F1A1] dark:border-[#004d3e]'
+            : 'bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none border-slate-200 dark:border-slate-700'
+        }`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={msg.image_url} alt="Foto chat" className="block max-h-72 w-full object-cover" />
+          <div className={`flex items-center justify-end gap-1 px-3 py-1.5 ${isMyMessage ? 'text-slate-500 dark:text-slate-300' : 'text-slate-400'}`}>
+            <span className="text-[10px] font-medium">{formatTime(msg.created_at)}</span>
+            {isMyMessage && (
+              <span className="ml-0.5">
+                {msg.is_read ? (
+                  <CheckCheck size={14} className="text-blue-500" />
+                ) : (
+                  <CheckCheck size={14} className="text-slate-400 dark:text-slate-500" />
+                )}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );

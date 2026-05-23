@@ -114,6 +114,25 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 -- ============================================================
+-- NOTIFICATIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  type varchar NOT NULL
+    CHECK (type IN (
+      'new_scan','new_message','item_returned',
+      'reward_claimed','status_changed','system'
+    )),
+  title varchar NOT NULL,
+  body text NOT NULL,
+  session_id uuid REFERENCES scan_sessions(id),
+  item_id uuid REFERENCES items(id),
+  is_read boolean DEFAULT false,
+  created_at timestamp DEFAULT now()
+);
+
+-- ============================================================
 -- RLS POLICIES FOR PUBLIC ACCESS
 -- ============================================================
 ALTER TABLE scan_sessions ENABLE ROW LEVEL SECURITY;
@@ -169,25 +188,6 @@ CREATE POLICY "Allow owners to view notifications"
 CREATE POLICY "Allow owners to update notifications" 
   ON notifications FOR UPDATE TO authenticated 
   USING (user_id = auth.uid());
-
--- ============================================================
--- NOTIFICATIONS
--- ============================================================
-CREATE TABLE IF NOT EXISTS notifications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
-  type varchar NOT NULL
-    CHECK (type IN (
-      'new_scan','new_message','item_returned',
-      'reward_claimed','status_changed','system'
-    )),
-  title varchar NOT NULL,
-  body text NOT NULL,
-  session_id uuid REFERENCES scan_sessions(id),
-  item_id uuid REFERENCES items(id),
-  is_read boolean DEFAULT false,
-  created_at timestamp DEFAULT now()
-);
 
 -- ============================================================
 -- QR ORDERS

@@ -67,6 +67,12 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
   const handleUpdate = async () => {
     setIsSaving(true);
     try {
+      if (item.user_id === 'demo123' || item.qr_code.startsWith('BALIK-DEMO-')) {
+        toast.success('Barang demo berhasil diperbarui!');
+        setIsEditing(false);
+        return;
+      }
+
       const { error } = await supabase.from('items').update(editData).eq('id', item.id);
       if (error) throw error;
       toast.success('Barang berhasil diperbarui!');
