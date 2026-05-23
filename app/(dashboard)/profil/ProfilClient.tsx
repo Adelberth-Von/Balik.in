@@ -17,7 +17,6 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
     full_name: initialProfile?.full_name || '',
     phone_number: initialProfile?.phone_number || '',
     whatsapp_number: initialProfile?.whatsapp_number || '',
-    whatsapp_number: initialProfile?.whatsapp_number || '',
     preferred_contact: initialProfile?.preferred_contact || 'chat',
   });
   const [email, setEmail] = useState(initialProfile?.email || '');
