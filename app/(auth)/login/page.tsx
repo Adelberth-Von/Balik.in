@@ -9,8 +9,8 @@ import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@balik.in');
+  const [password, setPassword] = useState('admin1234');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
