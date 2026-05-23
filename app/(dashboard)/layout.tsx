@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
 import DemoBanner from '@/components/layout/DemoBanner';
+import ForceTheme from '@/components/layout/ForceTheme';
 
 export default async function DashboardLayout({
   children,
@@ -15,7 +16,8 @@ export default async function DashboardLayout({
 
   if (isDemoMode) {
     return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-50">
+        <ForceTheme mode="auto" />
         <DemoBanner />
         <Sidebar unreadCount={2} unreadMessages={1} />
         <main className="md:ml-64 min-h-screen">
@@ -51,6 +53,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-50">
+      <ForceTheme mode="auto" />
       {isDemoUser && <DemoBanner />}
       <Sidebar unreadCount={unreadNotifs || 0} unreadMessages={unreadMsgs || 0} />
       <main className="md:ml-64 min-h-screen">

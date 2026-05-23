@@ -179,6 +179,30 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                     {Object.entries(STATUS_CONFIG).filter(([k]) => ['active','lost','found','returned'].includes(k)).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-zinc-500">Tawarkan Imbalan</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditData({...editData, reward_offered: !editData.reward_offered})}
+                      className={`relative w-9 h-5 rounded-full transition-all duration-300 ${editData.reward_offered ? 'bg-white' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full shadow transition-all duration-300 ${editData.reward_offered ? 'translate-x-4 bg-black' : 'translate-x-0.5 bg-zinc-400'}`} />
+                    </button>
+                  </div>
+                  {editData.reward_offered && (
+                    <div className="space-y-3 pt-2 border-t border-zinc-800">
+                      <div>
+                        <label className="text-xs font-semibold text-zinc-500 block mb-1">Pesan Reward</label>
+                        <textarea value={editData.reward_message} onChange={e => setEditData({...editData, reward_message: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm" rows={2} placeholder="Pesan imbalan..." />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-zinc-500 block mb-1">Nominal (Rp)</label>
+                        <input type="number" value={editData.reward_amount || ''} onChange={e => setEditData({...editData, reward_amount: parseInt(e.target.value) || 0})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm" placeholder="Contoh: 50000" />
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-2">
                   <button onClick={() => setIsEditing(false)} className="flex-1 py-2 rounded-lg bg-zinc-800 text-white text-sm font-semibold">Batal</button>
                   <button onClick={handleUpdate} disabled={isSaving} className="flex-1 py-2 rounded-lg bg-white text-black text-sm font-semibold">{isSaving ? 'Menyimpan...' : 'Simpan'}</button>

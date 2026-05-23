@@ -8,6 +8,7 @@ import Stats from '@/components/landing/Stats';
 import Testimonials from '@/components/landing/Testimonials';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
+import ForceTheme from '@/components/layout/ForceTheme';
 
 export const metadata: Metadata = {
   title: 'Balik.In — Barang Tertinggal? Balikin Aja!',
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-white dark:bg-slate-900 overflow-x-hidden">
+    <main className="min-h-screen bg-white overflow-x-hidden">
+      <ForceTheme mode="light" />
       <Navbar />
       <Hero />
       <Stats />

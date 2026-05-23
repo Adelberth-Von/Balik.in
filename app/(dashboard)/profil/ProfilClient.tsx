@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 export default function ProfilClient({ profile: initialProfile, userId }: { profile: UserType | null; userId: string }) {
   const supabase = createClient();
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
     phone_number: initialProfile?.phone_number || '',
     whatsapp_number: initialProfile?.whatsapp_number || '',
     preferred_contact: initialProfile?.preferred_contact || 'chat',
+    avatar_url: initialProfile?.avatar_url || '',
   });
   const [email, setEmail] = useState(initialProfile?.email || '');
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
@@ -48,6 +50,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
       } else {
         toast.success('Profil berhasil disimpan!');
       }
+      setIsEditing(false);
     } catch (e: any) { 
       toast.error(e.message || 'Gagal menyimpan'); 
     }
@@ -91,11 +94,17 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
         <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-64 h-64 bg-white/5 blur-[100px] rounded-full pointer-events-none" />
         
         <div className="relative">
-          <div className="w-24 h-24 bg-gradient-to-tr from-primary-400 to-primary-600 dark:from-zinc-200 dark:to-white rounded-full p-1 shadow-xl">
-            <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-full flex items-center justify-center text-3xl font-bold text-primary-600 dark:text-white">
-              {initialProfile?.full_name?.charAt(0).toUpperCase() || 'U'}
+          {formData.avatar_url ? (
+            <div className="w-24 h-24 rounded-full p-1 shadow-xl bg-gradient-to-tr from-primary-400 to-primary-600 dark:from-zinc-200 dark:to-white">
+              <img src={formData.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-full bg-white dark:bg-zinc-950" />
             </div>
-          </div>
+          ) : (
+            <div className="w-24 h-24 bg-gradient-to-tr from-primary-400 to-primary-600 dark:from-zinc-200 dark:to-white rounded-full p-1 shadow-xl">
+              <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-full flex items-center justify-center text-3xl font-bold text-primary-600 dark:text-white">
+                {initialProfile?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 text-center md:text-left relative z-10">
@@ -125,8 +134,16 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
         transition={{ delay: 0.2 }}
         className="bg-white/80 dark:bg-zinc-900/30 border border-slate-200 dark:border-white/5 shadow-sm rounded-3xl p-6 md:p-8 space-y-6"
       >
-        <div className="border-b border-slate-200 dark:border-white/5 pb-4 mb-6">
+        <div className="border-b border-slate-200 dark:border-white/5 pb-4 mb-6 flex items-center justify-between">
           <h3 className="font-bold text-lg text-slate-900 dark:text-white">Informasi Pribadi</h3>
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-semibold text-sm rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+            >
+              Edit Profil
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -134,7 +151,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <label className={labelClass}>Nama Lengkap</label>
             <div className="relative">
               <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="text" value={formData.full_name} onChange={(e) => setFormData(p => ({ ...p, full_name: e.target.value }))} className={`${inputClass} pl-11`} />
+              <input disabled={!isEditing} type="text" value={formData.full_name} onChange={(e) => setFormData(p => ({ ...p, full_name: e.target.value }))} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} />
             </div>
           </div>
 
@@ -142,7 +159,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <label className={labelClass}>Alamat Email</label>
             <div className="relative">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputClass} pl-11`} />
+              <input disabled={!isEditing} type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} />
             </div>
             <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1.5"><AlertTriangle size={12}/> Mengubah email memerlukan konfirmasi ke inbox Anda.</p>
           </div>
@@ -152,9 +169,10 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <div className="relative">
               <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
               <select 
+                disabled={!isEditing}
                 value={formData.preferred_contact} 
                 onChange={(e) => setFormData(p => ({ ...p, preferred_contact: e.target.value as any }))}
-                className={`${inputClass} pl-11 appearance-none`}
+                className={`${inputClass} pl-11 appearance-none disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`}
               >
                 <option value="chat">Hanya Chat In-App</option>
                 <option value="whatsapp">Hanya WhatsApp</option>
@@ -167,7 +185,7 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <label className={labelClass}>Nomor HP</label>
             <div className="relative">
               <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="tel" value={formData.phone_number} onChange={(e) => setFormData(p => ({ ...p, phone_number: e.target.value }))} className={`${inputClass} pl-11`} />
+              <input disabled={!isEditing} type="tel" value={formData.phone_number} onChange={(e) => setFormData(p => ({ ...p, phone_number: e.target.value }))} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} />
             </div>
           </div>
 
@@ -175,19 +193,37 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <label className={labelClass}>WhatsApp</label>
             <div className="relative">
               <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData(p => ({ ...p, whatsapp_number: e.target.value }))} className={`${inputClass} pl-11`} />
+              <input disabled={!isEditing} type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData(p => ({ ...p, whatsapp_number: e.target.value }))} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} />
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className={labelClass}>URL Foto Profil (Opsional)</label>
+            <div className="relative">
+              <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input disabled={!isEditing} type="url" value={formData.avatar_url} onChange={(e) => setFormData(p => ({ ...p, avatar_url: e.target.value }))} className={`${inputClass} pl-11 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-zinc-900`} placeholder="https://contoh.com/foto.jpg" />
             </div>
           </div>
         </div>
 
         <div className="pt-4 flex items-center justify-between">
           <p className="text-xs text-amber-600 dark:text-amber-500 font-medium">{isDemo ? 'Mode demo: Perubahan tidak akan disimpan' : ''}</p>
-          <button
-            onClick={handleSave} disabled={saving || isDemo}
-            className="bg-primary-600 dark:bg-white text-white dark:text-black font-semibold rounded-xl px-6 py-2.5 hover:bg-primary-700 dark:hover:bg-zinc-200 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
-          >
-            {saving ? 'Menyimpan...' : <><Save size={16} /> Simpan Perubahan</>}
-          </button>
+          {isEditing && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSave} disabled={saving || isDemo}
+                className="bg-primary-600 dark:bg-white text-white dark:text-black font-semibold rounded-xl px-6 py-2.5 hover:bg-primary-700 dark:hover:bg-zinc-200 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
+              >
+                {saving ? 'Menyimpan...' : <><Save size={16} /> Simpan Perubahan</>}
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
 

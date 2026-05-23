@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Check, QrCode, Download, Copy,
   MessageSquare, Phone, Shuffle, Loader2, Package,
-  Zap, FileText, Key, ShoppingBag, Coffee, BookOpen, Folder
+  Zap, FileText, Key, ShoppingBag, Coffee, BookOpen, Folder, X
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -64,9 +64,16 @@ export default function TambahBarangPage() {
   };
 
   const handleCreate = async () => {
-    if (!user) return;
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user;
+      
+      if (!currentUser) {
+        toast.error('Sesi tidak ditemukan. Silakan login kembali.');
+        return;
+      }
+      
       let qrCode = generateQrCode();
       const { data: existing } = await supabase.from('items').select('id').eq('qr_code', qrCode).single();
       if (existing) qrCode = generateQrCode();
@@ -74,7 +81,7 @@ export default function TambahBarangPage() {
       const { data, error } = await supabase
         .from('items')
         .insert({
-          user_id: user.id,
+          user_id: currentUser.id,
           item_name: itemName,
           item_category: category,
           item_description: description || null,
@@ -92,7 +99,7 @@ export default function TambahBarangPage() {
 
       if (error) throw error;
 
-      const { error: rpcError } = await supabase.rpc('increment_user_items', { user_id: user.id });
+      const { error: rpcError } = await supabase.rpc('increment_user_items', { user_id: currentUser.id });
 
       setCreatedItemId(data.id);
       setGeneratedQr(data.qr_code);
@@ -135,9 +142,18 @@ export default function TambahBarangPage() {
   return (
     <div className="p-4 md:p-6 max-w-xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Daftarkan Barang</h1>
-        <p className="text-zinc-500 text-sm mt-0.5">Buat QR code unik untuk barang Anda</p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Daftarkan Barang</h1>
+          <p className="text-zinc-500 text-sm mt-0.5">Buat QR code unik untuk barang Anda</p>
+        </div>
+        <button
+          onClick={() => router.push('/barang')}
+          className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors"
+          title="Tutup"
+        >
+          <X size={18} className="text-zinc-400" />
+        </button>
       </div>
 
       {/* Step Indicator */}
