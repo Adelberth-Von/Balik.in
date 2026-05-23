@@ -261,14 +261,19 @@ export default function ChatPage() {
         message: text,
         created_at: new Date().toISOString(),
       };
-      
-      await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: newMsg }) });
-      
-      // Fetch latest messages from API to trigger render
-      const res = await fetch(`/api/demo?token=${sessionToken}`);
-      const updatedChat = await res.json();
-      setMessages(updatedChat);
-      
+
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === optimistic.id ? newMsg as ChatMessage : msg))
+      );
+      fetch('/api/demo', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'ADD_MESSAGE', payload: newMsg }),
+      }).catch(() => {
+        setMessages((prev) => prev.filter((msg) => msg.id !== newMsg.id));
+        setNewMessage(text);
+        alert('Gagal mengirim pesan');
+      });
+
       setSending(false);
       return;
     }

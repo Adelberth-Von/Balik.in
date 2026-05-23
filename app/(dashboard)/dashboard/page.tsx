@@ -10,11 +10,11 @@ export const metadata = {
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  const isDemoCookie = cookieStore.get('demo_mode')?.value === 'true';
-  const isAdmin = user?.email === 'admin@balik.in';
-  const isDemo = isDemoCookie || isAdmin;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
 
   if (isDemo) {
     return (

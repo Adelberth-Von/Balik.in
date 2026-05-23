@@ -66,6 +66,21 @@ export default function TambahBarangPage() {
   const handleCreate = async () => {
     setLoading(true);
     try {
+      const isDemo =
+        document.cookie.includes('demo_mode=true') ||
+        user?.email === 'admin@balik.in';
+
+      if (isDemo) {
+        const demoId = `demo-${Date.now()}`;
+        const qrCode = `BALIK-DEMO-${demoId}`;
+
+        setCreatedItemId(demoId);
+        setGeneratedQr(qrCode);
+        setStep(2);
+        toast.success('Barang demo berhasil dibuat!');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user;
       

@@ -13,11 +13,11 @@ export default async function DashboardLayout({
 }) {
   const cookieStore = await cookies();
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const isDemoCookie = cookieStore.get('demo_mode')?.value === 'true';
-  const isAdmin = user?.email === 'admin@balik.in';
-  const isDemoMode = isDemoCookie || isAdmin;
+  const isDemoMode = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
 
   if (isDemoMode) {
     return (

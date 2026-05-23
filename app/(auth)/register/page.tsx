@@ -61,6 +61,7 @@ export default function RegisterPage() {
         },
       });
       if (error) throw error;
+      document.cookie = 'demo_mode=; path=/; max-age=0';
       toast.success('Akun berhasil dibuat! Selamat datang di Balik.In');
       router.push('/dashboard');
     } catch (err: unknown) {
@@ -74,7 +75,7 @@ export default function RegisterPage() {
   const handleDemoLogin = async () => {
     setDemoLoading(true);
     try {
-      document.cookie = "demo_mode=true; path=/";
+      document.cookie = 'demo_mode=true; path=/; max-age=86400';
       toast.success('Mode Demo aktif!');
       window.location.href = '/dashboard';
     } catch {

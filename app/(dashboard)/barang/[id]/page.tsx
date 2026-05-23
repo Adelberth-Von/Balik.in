@@ -6,7 +6,11 @@ import { cookies } from 'next/headers';
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const isDemo = cookieStore.get('demo_mode')?.value === 'true';
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
 
   if (isDemo) {
     const mockItem = {
@@ -39,8 +43,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
     return <ItemDetailClient item={mockItem as any} sessions={mockSessions as any} />;
   }
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const { data: item } = await supabase

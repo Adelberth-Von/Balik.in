@@ -115,9 +115,6 @@ export default function ScanPage() {
         const demoId = qrCode.replace('BALIK-DEMO-', '');
         token = demoId === '2' ? 'tok_1' : `tok_${demoId}`;
         
-        // Mock successful submission for demo
-        await new Promise(r => setTimeout(r, 1000));
-        
         const initialMessages: any[] = [
           { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai • ' + new Date().toLocaleString('id-ID'), created_at: new Date().toISOString() },
           { id: 'm2', session_id: token, sender_role: 'finder', message_type: 'text', message: message, created_at: new Date().toISOString() }

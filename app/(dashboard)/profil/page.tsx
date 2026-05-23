@@ -8,11 +8,11 @@ export const metadata = { title: 'Profil — Balik.In' };
 export default async function ProfilPage() {
   const cookieStore = await cookies();
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const isDemoCookie = cookieStore.get('demo_mode')?.value === 'true';
-  const isAdmin = user?.email === 'admin@balik.in';
-  const isDemo = isDemoCookie || isAdmin;
+  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
 
   if (isDemo) {
     return <ProfilClient profile={{ id: 'demo123', full_name: 'Sobat Demo', email: 'demo@balik.in', phone_number: '08123456789' } as any} userId="demo123" />;

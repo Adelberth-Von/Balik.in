@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, QrCode, Gamepad2, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -31,8 +29,16 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
+      if (email === 'admin@balik.in' && password === 'admin1234') {
+        document.cookie = 'demo_mode=true; path=/; max-age=86400';
+        toast.success('Mode Demo aktif!');
+        window.location.href = '/dashboard';
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      document.cookie = 'demo_mode=; path=/; max-age=0';
       toast.success('Berhasil masuk!');
       window.location.href = '/dashboard';
     } catch (err: any) {
@@ -60,26 +66,8 @@ export default function LoginPage() {
   const handleDemoLogin = async () => {
     setDemoLoading(true);
     try {
-      const demoEmail = 'admin@balik.in';
-      const demoPassword = 'admin1234';
-      const { error } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPassword });
-      
-      if (error && (error.message === 'Invalid login credentials' || error.message.includes('Invalid'))) {
-        const { error: regError } = await supabase.auth.signUp({ 
-          email: demoEmail, 
-          password: demoPassword,
-          options: { data: { full_name: 'Admin Balik.in' } }
-        });
-        if (!regError) {
-          toast.success('Masuk Mode Demo (Admin)!');
-          window.location.href = '/dashboard';
-          return;
-        }
-      } else if (error) {
-        throw error;
-      }
-      
-      toast.success('Masuk Mode Demo (Admin)!');
+      document.cookie = 'demo_mode=true; path=/; max-age=86400';
+      toast.success('Mode Demo aktif!');
       window.location.href = '/dashboard';
     } catch {
       toast.error('Demo tidak tersedia.');

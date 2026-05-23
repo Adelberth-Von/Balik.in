@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect logged-in users away from auth pages
-  if ((pathname === '/login' || pathname === '/register') && user) {
+  if ((pathname === '/login' || pathname === '/register') && user && user.email !== 'admin@balik.in') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
