@@ -84,9 +84,9 @@ export default function DashboardClient({ profile, items, sessions, notification
         
         toast.success('Data presentasi siap!', { id: 'dummyData' });
         window.location.reload();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to inject dummy data:', error);
-        toast.error('Gagal memuat data presentasi', { id: 'dummyData' });
+        toast.error(`Gagal memuat data: ${error?.message || 'Error tidak diketahui'}`, { id: 'dummyData', duration: 5000 });
       } finally {
         setIsInjecting(false);
       }
