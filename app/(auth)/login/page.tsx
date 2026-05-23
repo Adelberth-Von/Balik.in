@@ -35,8 +35,22 @@ export default function LoginPage() {
       if (error) throw error;
       toast.success('Berhasil masuk!');
       window.location.href = '/dashboard';
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Email atau password salah';
+    } catch (err: any) {
+      // Fitur khusus presentasi: Auto-register jika akun admin belum ada
+      if (email === 'admin@balik.in' && (err.message === 'Invalid login credentials' || err.message.includes('Invalid'))) {
+        const { error: regError } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: { data: { full_name: 'Admin Balik.in' } }
+        });
+        if (!regError) {
+          toast.success('Akun otomatis dibuat untuk presentasi!');
+          window.location.href = '/dashboard';
+          return;
+        }
+      }
+
+      const message = err.message || 'Email atau password salah';
       toast.error(message === 'Invalid login credentials' ? 'Email atau password salah' : message);
     } finally {
       setLoading(false);
