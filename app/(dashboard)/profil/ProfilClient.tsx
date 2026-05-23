@@ -211,7 +211,17 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
           {isEditing && (
             <div className="flex gap-2">
               <button
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setFormData({
+                    full_name: initialProfile?.full_name || '',
+                    phone_number: initialProfile?.phone_number || '',
+                    whatsapp_number: initialProfile?.whatsapp_number || '',
+                    preferred_contact: initialProfile?.preferred_contact || 'chat',
+                    avatar_url: initialProfile?.avatar_url || '',
+                  });
+                  setEmail(initialProfile?.email || '');
+                  setIsEditing(false);
+                }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 Batal
@@ -224,31 +234,6 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
               </button>
             </div>
           )}
-        </div>
-      </motion.div>
-
-      {/* Dark Mode Toggle */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="bg-white/80 dark:bg-zinc-900/30 border border-slate-200 dark:border-white/5 shadow-sm rounded-3xl p-6 flex items-center justify-between group hover:border-primary-500 dark:hover:border-white/10 transition-colors cursor-pointer"
-        onClick={toggleDark}
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 group-hover:text-primary-600 dark:group-hover:text-white transition-colors">
-            {isDark ? <Moon size={20} /> : <Sun size={20} />}
-          </div>
-          <div>
-            <p className="font-bold text-base text-slate-900 dark:text-white">Tema Tampilan</p>
-            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">{isDark ? 'Mode Gelap diaktifkan' : 'Mode Terang diaktifkan'}</p>
-          </div>
-        </div>
-        
-        <div className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 focus:outline-none ${isDark ? 'bg-white' : 'bg-zinc-700'}`}>
-          <span className={`inline-flex h-6 w-6 items-center justify-center transform rounded-full shadow-md transition-transform duration-300 ${isDark ? 'translate-x-7 bg-black' : 'translate-x-1 bg-white'}`}>
-            {isDark && <Check size={12} className="text-white" />}
-          </span>
         </div>
       </motion.div>
 

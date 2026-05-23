@@ -82,14 +82,6 @@ export default function Navbar() {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-2">
             <button
-              onClick={toggleDark}
-              className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle dark mode"
-            >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            <button
               onClick={handleDemoLogin}
               disabled={demoLoading}
               className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-black dark:hover:text-white px-3 py-2 transition-colors border border-transparent hover:border-black dark:hover:border-white"
@@ -117,9 +109,6 @@ export default function Navbar() {
 
           {/* Mobile Hamburger */}
           <div className="flex md:hidden items-center gap-2">
-            <button onClick={toggleDark} className="p-2 rounded-lg">
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg text-slate-700 dark:text-slate-300"

@@ -72,8 +72,8 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
       toast.success('Barang berhasil diperbarui!');
       setIsEditing(false);
       router.refresh();
-    } catch {
-      toast.error('Gagal memperbarui barang');
+    } catch (e: any) {
+      toast.error(e.message || 'Gagal memperbarui barang');
     } finally {
       setIsSaving(false);
     }
