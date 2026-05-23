@@ -26,91 +26,9 @@ interface Props {
 
 export default function DashboardClient({ profile, items, sessions, notifications, userId }: Props) {
   const [liveNotifications, setLiveNotifications] = useState(notifications);
-  const [isInjecting, setIsInjecting] = useState(false);
   const today = formatLongDate(new Date().toISOString());
 
   const [liveItems, setLiveItems] = useState<Item[]>(items);
-
-  useEffect(() => {
-    const injectDummyData = async () => {
-      if (profile?.email !== 'admin@balik.in' || items.length > 0 || isInjecting) return;
-      
-      setIsInjecting(true);
-      const supabase = createClient();
-      
-      try {
-        toast.loading('Menyiapkan data presentasi...', { id: 'dummyData' });
-        const timestamp = Date.now().toString(36).toUpperCase();
-        
-        const dummyItems = [
-          { 
-            id: `temp-${timestamp}-1`,
-            user_id: userId, 
-            item_name: 'MacBook Pro M2', 
-            item_category: 'elektronik', 
-            item_description: 'Laptop kerja dengan stiker Balik.in',
-            qr_code: `MAC-${timestamp}`,
-            status: 'active',
-            is_active: true,
-            reward_offered: true,
-            reward_amount: 500000,
-            contact_preference: 'chat',
-            total_scans: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          { 
-            id: `temp-${timestamp}-2`,
-            user_id: userId, 
-            item_name: 'Dompet Kulit Hitam', 
-            item_category: 'dompet', 
-            item_description: 'Berisi KTP dan kartu penting',
-            qr_code: `WLT-${timestamp}`,
-            status: 'active',
-            is_active: true,
-            reward_offered: true,
-            reward_amount: 100000,
-            contact_preference: 'both',
-            total_scans: 0,
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            updated_at: new Date(Date.now() - 86400000).toISOString()
-          },
-          { 
-            id: `temp-${timestamp}-3`,
-            user_id: userId, 
-            item_name: 'Kunci Mobil Pajero', 
-            item_category: 'kunci', 
-            item_description: 'Gantungan kunci kulit coklat',
-            qr_code: `KEY-${timestamp}`,
-            status: 'active',
-            is_active: true,
-            reward_offered: false,
-            contact_preference: 'whatsapp',
-            total_scans: 0,
-            created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-            updated_at: new Date(Date.now() - 86400000 * 2).toISOString()
-          }
-        ];
-
-        // Langsung tampilkan di UI secara instan!
-        setLiveItems(dummyItems as any);
-
-        // Kemudian simpan ke DB secara diam-diam
-        const { error: itemsError } = await supabase.from('items').insert(dummyItems.map(({id, created_at, updated_at, ...rest}) => rest));
-        
-        if (itemsError) throw itemsError;
-        
-        toast.success('Data presentasi siap!', { id: 'dummyData' });
-      } catch (error: any) {
-        console.error('Failed to inject dummy data:', error);
-        toast.error(`Gagal memuat data: ${error?.message || 'Error tidak diketahui'}`, { id: 'dummyData', duration: 5000 });
-      } finally {
-        setIsInjecting(false);
-      }
-    };
-
-    injectDummyData();
-  }, [profile?.email, items.length, userId, isInjecting]);
 
   useNotificationsRealtime(userId, (notif) => {
     setLiveNotifications((prev) => [notif, ...prev]);

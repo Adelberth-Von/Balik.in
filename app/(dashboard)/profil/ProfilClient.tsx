@@ -338,6 +338,28 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
           </div>
         </motion.div>
       )}
+
+      {/* Logout Button (Very important for mobile where sidebar is hidden) */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="pt-4 pb-12"
+      >
+        <button
+          onClick={async () => {
+            const { logoutAction } = await import('@/app/actions/auth');
+            await logoutAction();
+            localStorage.clear();
+            sessionStorage.clear();
+            toast.success('Berhasil keluar');
+            window.location.href = '/'; 
+          }}
+          className="w-full bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-zinc-200 border border-slate-800 dark:border-white/20 px-6 py-4 rounded-2xl font-bold transition-all text-base flex items-center justify-center gap-2"
+        >
+          Keluar dari Akun
+        </button>
+      </motion.div>
     </div>
   );
 }

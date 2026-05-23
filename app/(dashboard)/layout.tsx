@@ -12,7 +12,12 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const isDemoMode = cookieStore.get('demo_mode')?.value === 'true';
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isDemoCookie = cookieStore.get('demo_mode')?.value === 'true';
+  const isAdmin = user?.email === 'admin@balik.in';
+  const isDemoMode = isDemoCookie || isAdmin;
 
   if (isDemoMode) {
     return (
