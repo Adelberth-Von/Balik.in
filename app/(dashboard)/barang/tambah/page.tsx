@@ -66,12 +66,6 @@ export default function TambahBarangPage() {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      if (user?.email === 'demo@balik.in') {
-        toast.error('Mode demo tidak bisa mendaftarkan barang baru.');
-        setLoading(false);
-        return;
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user;
       

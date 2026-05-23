@@ -261,12 +261,8 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
               </button>
               <button
                 onClick={() => {
-                  if (isDemo) {
-                    toast.error('Mode demo tidak bisa menyimpan perubahan');
-                    return;
-                  }
                   handleSave();
-                }} disabled={saving || isDemo}
+                }} disabled={saving}
                 className="bg-primary-600 dark:bg-white text-white dark:text-black font-semibold rounded-xl px-6 py-2.5 hover:bg-primary-700 dark:hover:bg-zinc-200 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
               >
                 {saving ? 'Menyimpan...' : <><Save size={16} /> Simpan Perubahan</>}
