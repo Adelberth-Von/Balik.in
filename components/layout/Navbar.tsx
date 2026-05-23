@@ -47,7 +47,7 @@ export default function Navbar() {
         });
         if (!regError) {
           toast.success('🎮 Masuk Mode Demo (Admin)!');
-          router.push('/dashboard');
+          window.location.href = '/dashboard';
           return;
         }
       } else if (error) {
@@ -55,7 +55,7 @@ export default function Navbar() {
       }
       
       toast.success('🎮 Masuk Mode Demo (Admin)!');
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch {
       toast.error('Demo tidak tersedia saat ini');
     } finally {
@@ -108,21 +108,21 @@ export default function Navbar() {
               {demoLoading ? '[LOADING]' : '[DEMO]'}
             </button>
 
-            <Link
+            <a
               href="/login"
               className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-black dark:text-white px-5 py-2.5 border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
             >
               <LogIn size={16} />
               LOGIN
-            </Link>
+            </a>
 
-            <Link
+            <a
               href="/register"
               className="flex items-center gap-1.5 text-sm font-semibold btn-primary !py-2 !px-4 !rounded-full"
             >
               <UserPlus size={14} />
               Daftar Gratis
-            </Link>
+            </a>
           </div>
 
           {/* Mobile Hamburger */}
@@ -164,12 +164,12 @@ export default function Navbar() {
                 >
                   <Gamepad2 size={16} /> [DEMO]
                 </button>
-                <Link href="/login" className="w-full btn-outline !py-2.5 flex items-center justify-center gap-2">
+                <a href="/login" className="w-full btn-outline !py-2.5 flex items-center justify-center gap-2">
                   <LogIn size={16} /> Masuk
-                </Link>
-                <Link href="/register" className="w-full btn-primary !py-2.5 flex items-center justify-center gap-2">
+                </a>
+                <a href="/register" className="w-full btn-primary !py-2.5 flex items-center justify-center gap-2">
                   <UserPlus size={16} /> Daftar Gratis
-                </Link>
+                </a>
               </div>
             </div>
           </motion.div>
