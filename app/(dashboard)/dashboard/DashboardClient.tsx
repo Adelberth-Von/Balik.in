@@ -43,31 +43,34 @@ export default function DashboardClient({ profile, items, sessions, notification
           { 
             user_id: userId, 
             item_name: 'MacBook Pro M2', 
-            category: 'electronics', 
-            description: 'Laptop kerja dengan stiker Balik.in',
+            item_category: 'elektronik', 
+            item_description: 'Laptop kerja dengan stiker Balik.in',
             qr_code: 'MAC-12345',
             status: 'active',
             is_active: true,
+            reward_offered: true,
             reward_amount: 500000
           },
           { 
             user_id: userId, 
             item_name: 'Dompet Kulit Hitam', 
-            category: 'other', 
-            description: 'Berisi KTP dan kartu penting',
+            item_category: 'dompet', 
+            item_description: 'Berisi KTP dan kartu penting',
             qr_code: 'WLT-67890',
             status: 'active',
             is_active: true,
+            reward_offered: true,
             reward_amount: 100000
           },
           { 
             user_id: userId, 
             item_name: 'Kunci Mobil Pajero', 
-            category: 'other', 
-            description: 'Gantungan kunci kulit coklat',
+            item_category: 'kunci', 
+            item_description: 'Gantungan kunci kulit coklat',
             qr_code: 'KEY-11223',
             status: 'active',
-            is_active: true
+            is_active: true,
+            reward_offered: false
           }
         ]);
         
