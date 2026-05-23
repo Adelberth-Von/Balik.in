@@ -12,6 +12,9 @@ import { STATUS_CONFIG } from '@/lib/types';
 import { timeAgo, formatLongDate } from '@/lib/utils/formatters';
 import { useNotificationsRealtime } from '@/lib/hooks/useRealtime';
 import { cn } from '@/lib/utils/cn';
+import { createClient } from '@/lib/supabase/client';
+import toast from 'react-hot-toast';
+import { useEffect } from 'react';
 
 interface Props {
   profile: User | null;
@@ -23,7 +26,65 @@ interface Props {
 
 export default function DashboardClient({ profile, items, sessions, notifications, userId }: Props) {
   const [liveNotifications, setLiveNotifications] = useState(notifications);
+  const [isInjecting, setIsInjecting] = useState(false);
   const today = formatLongDate(new Date().toISOString());
+
+  useEffect(() => {
+    const injectDummyData = async () => {
+      if (profile?.email !== 'admin@balik.in' || items.length > 0 || isInjecting) return;
+      
+      setIsInjecting(true);
+      const supabase = createClient();
+      
+      try {
+        toast.loading('Menyiapkan data presentasi...', { id: 'dummyData' });
+        
+        const { error: itemsError } = await supabase.from('items').insert([
+          { 
+            user_id: userId, 
+            item_name: 'MacBook Pro M2', 
+            category: 'electronics', 
+            description: 'Laptop kerja dengan stiker Balik.in',
+            qr_code: 'MAC-12345',
+            status: 'active',
+            is_active: true,
+            reward_amount: 500000
+          },
+          { 
+            user_id: userId, 
+            item_name: 'Dompet Kulit Hitam', 
+            category: 'other', 
+            description: 'Berisi KTP dan kartu penting',
+            qr_code: 'WLT-67890',
+            status: 'active',
+            is_active: true,
+            reward_amount: 100000
+          },
+          { 
+            user_id: userId, 
+            item_name: 'Kunci Mobil Pajero', 
+            category: 'other', 
+            description: 'Gantungan kunci kulit coklat',
+            qr_code: 'KEY-11223',
+            status: 'active',
+            is_active: true
+          }
+        ]);
+        
+        if (itemsError) throw itemsError;
+        
+        toast.success('Data presentasi siap!', { id: 'dummyData' });
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to inject dummy data:', error);
+        toast.error('Gagal memuat data presentasi', { id: 'dummyData' });
+      } finally {
+        setIsInjecting(false);
+      }
+    };
+
+    injectDummyData();
+  }, [profile?.email, items.length, userId, isInjecting]);
 
   useNotificationsRealtime(userId, (notif) => {
     setLiveNotifications((prev) => [notif, ...prev]);
