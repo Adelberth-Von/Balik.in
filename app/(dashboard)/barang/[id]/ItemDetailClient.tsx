@@ -340,14 +340,15 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                 <p className="text-sm text-zinc-500">QR code ini belum pernah dipindai siapapun.</p>
               </div>
             ) : (
-              sessions.map((session, i) => (
-                <motion.div
-                  key={session.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="bg-zinc-900 border border-zinc-800 rounded-xl p-4"
-                >
+              <div className="scrollbar-stable max-h-[calc(100dvh-15rem)] space-y-3 overflow-y-auto pr-1">
+                {sessions.map((session, i) => (
+                  <motion.div
+                    key={session.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-4"
+                  >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       {!session.is_read_by_owner && (
@@ -388,8 +389,9 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
                       <span className="bg-red-500 text-white text-[9px] rounded-full px-1.5 py-0.5 leading-none">Baru</span>
                     )}
                   </Link>
-                </motion.div>
-              ))
+                  </motion.div>
+                ))}
+              </div>
             )}
           </motion.div>
         )}

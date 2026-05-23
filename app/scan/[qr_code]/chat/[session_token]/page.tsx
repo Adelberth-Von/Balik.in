@@ -602,7 +602,7 @@ export default function ChatPage() {
       </div>
 
       {/* MESSAGES */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
+      <div className="scrollbar-stable flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} isOwner={isOwner} />
         ))}

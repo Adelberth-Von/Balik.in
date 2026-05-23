@@ -54,6 +54,22 @@
     background: #52525b;
   }
 
+  .scrollbar-stable {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #52525b transparent;
+  }
+
+  .scrollbar-stable::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-stable::-webkit-scrollbar-thumb {
+    background: #52525b;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
   .hide-cursor {
     cursor: none !important;
   }

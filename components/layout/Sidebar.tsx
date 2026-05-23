@@ -86,7 +86,7 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-zinc-950 border-r border-zinc-800/60 min-h-screen fixed left-0 top-0 z-40">
+    <aside className="hidden md:flex flex-col w-64 bg-zinc-950 border-r border-zinc-800/60 min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-zinc-800/60">
         <Link href="/" className="flex items-center gap-3 group">
