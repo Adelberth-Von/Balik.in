@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, CheckCheck, QrCode, MessageSquare, CheckCircle2, Star, Settings } from 'lucide-react';
+import { Bell, CheckCheck, QrCode, MessageSquare, CheckCircle2, Star, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Notification, NotificationType } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
 import { createClient } from '@/lib/supabase/client';
 import { useNotificationsRealtime } from '@/lib/hooks/useRealtime';
 import { cn } from '@/lib/utils/cn';
 import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react';
 
 const TYPE_CONFIG: Record<NotificationType, { icon: React.ReactNode; color: string; bg: string }> = {
   new_scan: {
@@ -53,6 +54,8 @@ const TABS = [
 export default function NotifikasiClient({ notifications: initialNotifications, userId }: { notifications: Notification[]; userId: string }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [tab, setTab] = useState('all');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
   const supabase = createClient();
 
   useNotificationsRealtime(userId, (notif) => {
@@ -63,11 +66,28 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
     await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     toast.success('Semua notifikasi ditandai dibaca');
+    window.dispatchEvent(new Event('notifications_read'));
   };
 
-  const markRead = async (id: string) => {
+  const markRead = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     await supabase.from('notifications').update({ is_read: true }).eq('id', id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    window.dispatchEvent(new CustomEvent('notification_read', { detail: { id } }));
+  };
+
+  const deleteNotification = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase.from('notifications').delete().eq('id', id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    toast.success('Notifikasi dihapus');
+  };
+
+  const deleteAllNotifications = async () => {
+    if (!window.confirm('Yakin ingin menghapus semua notifikasi?')) return;
+    await supabase.from('notifications').delete().eq('user_id', userId);
+    setNotifications([]);
+    toast.success('Semua notifikasi dihapus');
   };
 
   const filtered = notifications.filter((n) => {
@@ -76,6 +96,11 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
     if (tab === 'message') return n.type === 'new_message';
     return true;
   });
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedNotifications = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  const handleTabChange = (v: string) => { setTab(v); setPage(1); };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -90,14 +115,24 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
             {unreadCount > 0 && <span className="text-blue-400 ml-1">· {unreadCount} belum dibaca</span>}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 transition-all"
-          >
-            <CheckCheck size={14} /> Tandai dibaca
-          </button>
-        )}
+        <div className="flex gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <CheckCheck size={14} /> Tandai dibaca
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              onClick={deleteAllNotifications}
+              className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <Trash2 size={14} /> Hapus Semua
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -105,7 +140,7 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
         {TABS.map((t) => (
           <button
             key={t.value}
-            onClick={() => setTab(t.value)}
+            onClick={() => handleTabChange(t.value)}
             className={cn(
               'flex-1 min-w-max px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150',
               tab === t.value ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'
@@ -132,7 +167,7 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((notif, i) => {
+          {paginatedNotifications.map((notif, i) => {
             const tc = TYPE_CONFIG[notif.type];
             const isUnread = !notif.is_read;
             return (
@@ -157,10 +192,39 @@ export default function NotifikasiClient({ notifications: initialNotifications, 
                   <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{notif.body}</p>
                   <p className="text-[11px] text-zinc-600 mt-1.5">{timeAgo(notif.created_at)}</p>
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-blue-400 rounded-full shrink-0 mt-1.5" />}
+                <div className="flex flex-col items-end justify-between self-stretch">
+                  {isUnread && <div className="w-2 h-2 bg-blue-400 rounded-full shrink-0 mb-auto mt-1" />}
+                  <button 
+                    onClick={(e) => deleteNotification(notif.id, e)}
+                    className="mt-auto p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </motion.div>
             );
           })}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-zinc-800">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 disabled:opacity-50 hover:bg-zinc-800 transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm text-zinc-400 font-medium">Hal {page} / {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 disabled:opacity-50 hover:bg-zinc-800 transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

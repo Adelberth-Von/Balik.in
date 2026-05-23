@@ -42,6 +42,19 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
   }, [unreadMessages, unreadCount]);
 
   useEffect(() => {
+    const handleAllRead = () => setLiveUnreadCount(0);
+    const handleSingleRead = () => setLiveUnreadCount(prev => Math.max(0, prev - 1));
+    
+    window.addEventListener('notifications_read', handleAllRead);
+    window.addEventListener('notification_read', handleSingleRead as EventListener);
+    
+    return () => {
+      window.removeEventListener('notifications_read', handleAllRead);
+      window.removeEventListener('notification_read', handleSingleRead as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     const isDemo = document.cookie.includes('demo_mode=true');
     if (!isDemo) return;
 

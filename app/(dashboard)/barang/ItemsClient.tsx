@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, Search, Grid, List, Package, QrCode, Eye } from 'lucide-react';
+import { Plus, Search, Grid, List, Package, QrCode, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Item, ItemCategory, ItemStatus } from '@/lib/types';
 import { STATUS_CONFIG } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
@@ -35,6 +35,8 @@ export default function ItemsClient({ items }: { items: Item[] }) {
   const [category, setCategory] = useState<ItemCategory | 'all'>('all');
   const [status, setStatus] = useState<ItemStatus | 'all'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 6; // Set to 6 so it's easier to see pagination with dummy data
 
   const filtered = items.filter((item) => {
     const matchSearch = item.item_name.toLowerCase().includes(search.toLowerCase());
@@ -42,6 +44,14 @@ export default function ItemsClient({ items }: { items: Item[] }) {
     const matchStatus = status === 'all' || item.status === status;
     return matchSearch && matchCat && matchStatus;
   });
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
+  const handleCategory = (v: ItemCategory | 'all') => { setCategory(v); setPage(1); };
+  const handleStatus = (v: ItemStatus | 'all') => { setStatus(v); setPage(1); };
 
   return (
     <div className="p-4 md:p-6">
@@ -63,7 +73,7 @@ export default function ItemsClient({ items }: { items: Item[] }) {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 pl-10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all text-sm"
             placeholder="Cari barang..."
           />
@@ -71,7 +81,7 @@ export default function ItemsClient({ items }: { items: Item[] }) {
         <div className="flex gap-2 flex-wrap">
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as ItemCategory | 'all')}
+            onChange={(e) => handleCategory(e.target.value as ItemCategory | 'all')}
             className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-32 focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             {CATEGORIES.map((c) => (
@@ -80,7 +90,7 @@ export default function ItemsClient({ items }: { items: Item[] }) {
           </select>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as ItemStatus | 'all')}
+            onChange={(e) => handleStatus(e.target.value as ItemStatus | 'all')}
             className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white flex-1 min-w-32 focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             {STATUSES.map((s) => (
@@ -124,12 +134,34 @@ export default function ItemsClient({ items }: { items: Item[] }) {
             </Link>
           )}
         </div>
-      ) : (
-        <div className={view === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-          {filtered.map((item, i) => (
-            <ItemCard key={item.id} item={item} view={view} index={i} />
-          ))}
-        </div>
+        <>
+          <div className={view === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
+            {paginatedItems.map((item, i) => (
+              <ItemCard key={item.id} item={item} view={view} index={i} />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 disabled:opacity-50 hover:bg-zinc-800 transition-colors"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-sm text-zinc-400 font-medium">Halaman {page} dari {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 disabled:opacity-50 hover:bg-zinc-800 transition-colors"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

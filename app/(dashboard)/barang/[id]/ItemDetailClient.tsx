@@ -11,7 +11,8 @@ import QRCodeLib from 'react-qr-code';
 import { cn } from '@/lib/utils/cn';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 
 const TABS = [
   { id: 'info', label: 'Info', icon: Info },
@@ -24,6 +25,20 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'qr' ? 'qr' : 'info';
   const [tab, setTab] = useState(initialTab);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editData, setEditData] = useState({
+    item_name: item.item_name,
+    item_category: item.item_category,
+    item_description: item.item_description || '',
+    status: item.status,
+    contact_preference: item.contact_preference,
+    reward_offered: item.reward_offered,
+    reward_amount: item.reward_amount || 0,
+    reward_message: item.reward_message || '',
+  });
+  const supabase = createClient();
   const catInfo = CATEGORY_CONFIG[item.item_category];
   const statusInfo = STATUS_CONFIG[item.status];
   const qrUrl = getQrUrl(item.qr_code);
@@ -46,6 +61,35 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
       toast.success('QR berhasil didownload!');
     } catch {
       toast.error('Gagal download QR');
+    }
+  };
+
+  const handleUpdate = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from('items').update(editData).eq('id', item.id);
+      if (error) throw error;
+      toast.success('Barang berhasil diperbarui!');
+      setIsEditing(false);
+      router.refresh();
+    } catch {
+      toast.error('Gagal memperbarui barang');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Yakin ingin menghapus barang ini secara permanen?')) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('items').delete().eq('id', item.id);
+      if (error) throw error;
+      toast.success('Barang dihapus!');
+      router.push('/barang');
+    } catch {
+      toast.error('Gagal menghapus barang');
+      setIsDeleting(false);
     }
   };
 
@@ -113,49 +157,88 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            {/* Main Info Card */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center shrink-0">
-                  <Package className="w-6 h-6 text-zinc-400" />
+            {isEditing ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-500 block mb-1">Nama Barang</label>
+                  <input type="text" value={editData.item_name} onChange={e => setEditData({...editData, item_name: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-white text-base">{item.item_name}</h2>
-                  <p className="text-sm text-zinc-400 mt-0.5">{catInfo.label}</p>
-                  {item.item_description && (
-                    <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{item.item_description}</p>
-                  )}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-500 block mb-1">Kategori</label>
+                  <select value={editData.item_category} onChange={e => setEditData({...editData, item_category: e.target.value as any})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm">
+                    {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-500 block mb-1">Deskripsi</label>
+                  <textarea value={editData.item_description} onChange={e => setEditData({...editData, item_description: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm" rows={2} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-500 block mb-1">Status</label>
+                  <select value={editData.status} onChange={e => setEditData({...editData, status: e.target.value as any})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm">
+                    {Object.entries(STATUS_CONFIG).filter(([k]) => ['active','lost','found','returned'].includes(k)).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setIsEditing(false)} className="flex-1 py-2 rounded-lg bg-zinc-800 text-white text-sm font-semibold">Batal</button>
+                  <button onClick={handleUpdate} disabled={isSaving} className="flex-1 py-2 rounded-lg bg-white text-black text-sm font-semibold">{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Main Info Card */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center shrink-0">
+                        <Package className="w-6 h-6 text-zinc-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="font-semibold text-white text-base">{item.item_name}</h2>
+                        <p className="text-sm text-zinc-400 mt-0.5">{catInfo.label}</p>
+                        {item.item_description && (
+                          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{item.item_description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Detail Row */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-sm text-zinc-400">Status</span>
-                <span className={statusInfo.className}>{statusInfo.label}</span>
-              </div>
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-sm text-zinc-400">Kategori</span>
-                <span className="text-sm font-medium text-white">{catInfo.label}</span>
-              </div>
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-sm text-zinc-400">Preferensi Kontak</span>
-                <span className="text-sm font-medium text-white capitalize">{item.contact_preference}</span>
-              </div>
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-sm text-zinc-400">Reward</span>
-                <span className={`text-sm font-medium ${item.reward_offered ? 'text-amber-400' : 'text-zinc-500'}`}>
-                  {item.reward_offered ? `Rp ${item.reward_amount?.toLocaleString('id-ID') || 'Ada'}` : 'Tidak ada'}
-                </span>
-              </div>
-            </div>
+                {/* Detail Row */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-sm text-zinc-400">Status</span>
+                    <span className={statusInfo.className}>{statusInfo.label}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-sm text-zinc-400">Kategori</span>
+                    <span className="text-sm font-medium text-white">{catInfo.label}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-sm text-zinc-400">Preferensi Kontak</span>
+                    <span className="text-sm font-medium text-white capitalize">{item.contact_preference}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="text-sm text-zinc-400">Reward</span>
+                    <span className={`text-sm font-medium ${item.reward_offered ? 'text-amber-400' : 'text-zinc-500'}`}>
+                      {item.reward_offered ? `Rp ${item.reward_amount?.toLocaleString('id-ID') || 'Ada'}` : 'Tidak ada'}
+                    </span>
+                  </div>
+                </div>
 
-            {item.reward_offered && item.reward_message && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-                <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Pesan Reward</p>
-                <p className="text-sm text-amber-300">{item.reward_message}</p>
-              </div>
+                {item.reward_offered && item.reward_message && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                    <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Pesan Reward</p>
+                    <p className="text-sm text-amber-300">{item.reward_message}</p>
+                  </div>
+                )}
+                
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button onClick={() => setIsEditing(true)} className="py-2.5 rounded-lg bg-zinc-800 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">Edit Barang</button>
+                  <button onClick={handleDelete} disabled={isDeleting} className="py-2.5 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 text-sm font-semibold hover:bg-red-500 hover:text-white transition-colors">{isDeleting ? 'Menghapus...' : 'Hapus Barang'}</button>
+                </div>
+              </>
             )}
           </motion.div>
         )}

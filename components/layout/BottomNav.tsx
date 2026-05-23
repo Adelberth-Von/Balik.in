@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/barang', label: 'Barang', icon: Package },
   { href: '/peta', label: 'Peta', icon: Map },
+  { href: '/notifikasi', label: 'Notifikasi', icon: Bell },
   { href: '/pesan', label: 'Pesan', icon: MessageSquare },
   { href: '/profil', label: 'Profil', icon: User },
 ];
@@ -32,6 +33,19 @@ export default function BottomNav({
   }, [unreadMessages, unreadCount]);
 
   useEffect(() => {
+    const handleAllRead = () => setLiveUnreadCount(0);
+    const handleSingleRead = () => setLiveUnreadCount(prev => Math.max(0, prev - 1));
+    
+    window.addEventListener('notifications_read', handleAllRead);
+    window.addEventListener('notification_read', handleSingleRead as EventListener);
+    
+    return () => {
+      window.removeEventListener('notifications_read', handleAllRead);
+      window.removeEventListener('notification_read', handleSingleRead as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     const isDemo = document.cookie.includes('demo_mode=true');
     if (!isDemo) return;
 
@@ -47,8 +61,8 @@ export default function BottomNav({
   }, []);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800" style={{ backgroundColor: '#0c0c0e' }}>
-      <div className="flex items-center justify-around px-2">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950">
+      <div className="flex items-center justify-around px-1">
         {NAV_ITEMS.map((item) => {
           const isActive =
             item.href === '/dashboard'
@@ -87,7 +101,7 @@ export default function BottomNav({
               </div>
               <span
                 className={cn(
-                  'text-[10px] font-medium leading-none',
+                  'text-[9px] font-medium leading-none mt-1',
                   isActive ? 'text-white' : 'text-zinc-500'
                 )}
               >

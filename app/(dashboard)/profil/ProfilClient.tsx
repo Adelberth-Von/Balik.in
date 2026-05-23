@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, Moon, Sun, Save, Lock, AlertTriangle, Package, QrCode, CheckCircle2, ChevronRight, Check } from 'lucide-react';
+import { User, Mail, Phone, Moon, Sun, Save, Lock, AlertTriangle, Package, QrCode, CheckCircle2, ChevronRight, Check, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { User as UserType } from '@/lib/types';
 import { formatDate } from '@/lib/utils/formatters';
@@ -17,8 +17,10 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
     full_name: initialProfile?.full_name || '',
     phone_number: initialProfile?.phone_number || '',
     whatsapp_number: initialProfile?.whatsapp_number || '',
+    whatsapp_number: initialProfile?.whatsapp_number || '',
     preferred_contact: initialProfile?.preferred_contact || 'chat',
   });
+  const [email, setEmail] = useState(initialProfile?.email || '');
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
 
   useEffect(() => {
@@ -39,8 +41,17 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
     try {
       const { error } = await supabase.from('users').update(formData).eq('id', userId);
       if (error) throw error;
-      toast.success('Profil berhasil disimpan!');
-    } catch { toast.error('Gagal menyimpan'); }
+      
+      if (email !== initialProfile?.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email });
+        if (emailError) throw emailError;
+        toast.success('Profil disimpan. Cek inbox lama dan baru Anda untuk konfirmasi perubahan email!');
+      } else {
+        toast.success('Profil berhasil disimpan!');
+      }
+    } catch (e: any) { 
+      toast.error(e.message || 'Gagal menyimpan'); 
+    }
     finally { setSaving(false); }
   };
 
@@ -132,9 +143,25 @@ export default function ProfilClient({ profile: initialProfile, userId }: { prof
             <label className={labelClass}>Alamat Email</label>
             <div className="relative">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="email" value={initialProfile?.email || ''} disabled className={`${inputClass} pl-11 opacity-50 cursor-not-allowed`} />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputClass} pl-11`} />
             </div>
-            <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1.5"><AlertTriangle size={12}/> Email terikat dengan akun autentikasi utama.</p>
+            <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1.5"><AlertTriangle size={12}/> Mengubah email memerlukan konfirmasi ke inbox Anda.</p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Preferensi Kontak Default</label>
+            <div className="relative">
+              <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <select 
+                value={formData.preferred_contact} 
+                onChange={(e) => setFormData(p => ({ ...p, preferred_contact: e.target.value as any }))}
+                className={`${inputClass} pl-11 appearance-none`}
+              >
+                <option value="chat">Hanya Chat In-App</option>
+                <option value="whatsapp">Hanya WhatsApp</option>
+                <option value="both">Chat & WhatsApp</option>
+              </select>
+            </div>
           </div>
 
           <div>

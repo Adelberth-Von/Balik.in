@@ -109,21 +109,34 @@ export default function PetaClient({ sessions }: { sessions: SessionWithItem[] }
 
       {/* Selected Session Panel */}
       {selectedSession && (
-        <div className="border-t border-zinc-800 bg-zinc-950 p-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center shrink-0">
-              <Package size={16} className="text-zinc-400" />
+        <div className="border-t border-zinc-800 bg-zinc-950 p-4 shrink-0 flex flex-col gap-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center shrink-0">
+                <Package size={18} className="text-zinc-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-white truncate">
+                  {(selectedSession as SessionWithItem).items?.item_name || 'Barang'}
+                </p>
+                <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{selectedSession.finder_location_name || 'Lokasi tidak diketahui'}</p>
+                <div className="flex items-center gap-1 text-[10px] text-zinc-600 mt-1">
+                  <Clock size={10} />
+                  {timeAgo(selectedSession.created_at)}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-white truncate">
-                {(selectedSession as SessionWithItem).items?.item_name || 'Barang'}
-              </p>
-              <p className="text-xs text-zinc-500">{selectedSession.finder_location_name || 'Lokasi tidak diketahui'}</p>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-zinc-500">
-              <Clock size={11} />
-              {timeAgo(selectedSession.created_at)}
-            </div>
+            
+            {selectedSession.finder_latitude && selectedSession.finder_longitude && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${selectedSession.finder_latitude},${selectedSession.finder_longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap ml-4 shrink-0"
+              >
+                <MapPin size={14} /> Arahkan ke Lokasi
+              </a>
+            )}
           </div>
         </div>
       )}
