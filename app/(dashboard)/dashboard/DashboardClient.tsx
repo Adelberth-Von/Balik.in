@@ -100,10 +100,6 @@ export default function DashboardClient({ profile, items, sessions, notification
         
         if (itemsError) throw itemsError;
         
-        if (insertedItems && insertedItems.length > 0) {
-          setLiveItems(insertedItems as any);
-        }
-        
         toast.success('Data presentasi siap!', { id: 'dummyData' });
       } catch (error: any) {
         console.error('Failed to inject dummy data:', error);
