@@ -7,6 +7,8 @@ import type { ScanSession, Item } from '@/lib/types';
 import { CATEGORY_CONFIG } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { timeAgo } from '@/lib/utils/formatters';
+import CategoryIcon from '@/components/ui/CategoryIcon';
+import { ArrowRight, MapPin } from 'lucide-react';
 
 // Fix leaflet icons
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -67,7 +69,7 @@ export default function MapView({ sessions, onSelectSession }: Props) {
             <Popup>
               <div className="min-w-48">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xl">{catInfo?.emoji}</span>
+                  <CategoryIcon category={session.items?.item_category} size={18} className="text-blue-600" />
                   <div>
                     <p className="font-semibold text-sm">{catInfo?.label}</p>
                     <p className="text-xs text-gray-500">{timeAgo(session.created_at)}</p>
@@ -75,7 +77,8 @@ export default function MapView({ sessions, onSelectSession }: Props) {
                 </div>
                 {session.finder_location_name && (
                   <p className="text-xs text-gray-600 mb-1">
-                    📍 {session.finder_location_name}
+                    <MapPin size={12} className="mr-1 inline-block align-[-2px]" />
+                    {session.finder_location_name}
                   </p>
                 )}
                 {session.initial_message && (
@@ -89,7 +92,7 @@ export default function MapView({ sessions, onSelectSession }: Props) {
                   }}
                   className="w-full mt-1 bg-blue-600 text-white text-xs py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Buka Chat →
+                  Buka Chat <ArrowRight size={12} className="inline-block align-[-2px]" />
                 </button>
               </div>
             </Popup>

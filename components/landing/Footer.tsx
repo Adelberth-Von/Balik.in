@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { QrCode, Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function Footer() {
   return (
@@ -9,12 +10,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-white dark:bg-black flex items-center justify-center border-2 border-white dark:border-black">
-                <QrCode size={24} className="text-black dark:text-white" />
-              </div>
-              <span className="font-black text-3xl tracking-tighter uppercase">
-                BALIK.IN
-              </span>
+              <BrandLogo variant="full" className="h-12 w-auto" />
             </div>
             <p className="text-xs uppercase tracking-widest leading-loose mb-8 max-w-sm font-bold">
               SISTEM PEMULIHAN BARANG HILANG BRUTALIST & EFEKTIF UNTUK MAHASISWA DAN MASYARAKAT.

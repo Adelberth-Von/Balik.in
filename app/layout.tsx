@@ -16,6 +16,14 @@ export const metadata: Metadata = {
     description: 'Sistem pemulihan barang hilang berbasis QR code untuk mahasiswa Yogyakarta',
     type: 'website',
   },
+  icons: {
+    icon: [
+      { url: '/brand/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/brand/balik-icon.png',
+  },
 };
 
 export default function RootLayout({

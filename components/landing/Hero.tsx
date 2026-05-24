@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Gamepad2, QrCode, ArrowRight, Sparkles, Shield, MapPin, MessageSquare, Zap } from 'lucide-react';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function Hero() {
   return (
@@ -21,6 +22,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
+              <BrandLogo variant="full" priority className="mb-6 h-12 w-auto sm:h-14" />
               <div className="inline-flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 px-4 py-1.5 rounded-full text-xs font-medium mb-6 shadow-sm">
                 <Sparkles size={14} className="text-blue-500" />
                 Dipercaya oleh 500+ Mahasiswa

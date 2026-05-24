@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, QrCode, Gamepad2, LogIn } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Gamepad2, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@balik.in');
@@ -87,9 +88,7 @@ export default function LoginPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl shadow-sm p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mx-auto mb-4">
-              <QrCode size={24} className="text-black" />
-            </div>
+            <BrandLogo variant="icon" priority className="mx-auto mb-4 h-12 w-12" />
             <h1 className="text-2xl font-bold text-white tracking-tight">
               Selamat Datang
             </h1>

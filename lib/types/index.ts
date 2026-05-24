@@ -138,17 +138,17 @@ export interface QrOrder {
 
 export const CATEGORY_CONFIG: Record<
   ItemCategory,
-  { emoji: string; label: string; color: string }
+  { label: string; color: string }
 > = {
-  elektronik: { emoji: '🔌', label: 'Elektronik', color: 'bg-blue-100 text-blue-700' },
-  tas: { emoji: '👜', label: 'Tas', color: 'bg-purple-100 text-purple-700' },
-  botol: { emoji: '💧', label: 'Botol Minum', color: 'bg-cyan-100 text-cyan-700' },
-  kunci: { emoji: '🔑', label: 'Kunci', color: 'bg-yellow-100 text-yellow-700' },
-  dompet: { emoji: '👛', label: 'Dompet', color: 'bg-orange-100 text-orange-700' },
-  pakaian: { emoji: '👕', label: 'Pakaian', color: 'bg-pink-100 text-pink-700' },
-  buku: { emoji: '📚', label: 'Buku', color: 'bg-green-100 text-green-700' },
-  dokumen: { emoji: '📄', label: 'Dokumen', color: 'bg-gray-100 text-gray-700' },
-  lainnya: { emoji: '📦', label: 'Lainnya', color: 'bg-slate-100 text-slate-700' },
+  elektronik: { label: 'Elektronik', color: 'bg-blue-100 text-blue-700' },
+  tas: { label: 'Tas', color: 'bg-purple-100 text-purple-700' },
+  botol: { label: 'Botol Minum', color: 'bg-cyan-100 text-cyan-700' },
+  kunci: { label: 'Kunci', color: 'bg-yellow-100 text-yellow-700' },
+  dompet: { label: 'Dompet', color: 'bg-orange-100 text-orange-700' },
+  pakaian: { label: 'Pakaian', color: 'bg-pink-100 text-pink-700' },
+  buku: { label: 'Buku', color: 'bg-green-100 text-green-700' },
+  dokumen: { label: 'Dokumen', color: 'bg-gray-100 text-gray-700' },
+  lainnya: { label: 'Lainnya', color: 'bg-slate-100 text-slate-700' },
 };
 
 export const STATUS_CONFIG: Record<

@@ -10,13 +10,13 @@ import {
   Map,
   Bell,
   User,
-  QrCode,
   LogOut,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/lib/hooks/useAuth';
 import toast from 'react-hot-toast';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -90,9 +90,7 @@ export default function Sidebar({ unreadCount = 0, unreadMessages = 0 }: { unrea
       {/* Logo */}
       <div className="px-6 py-5 border-b border-zinc-800/60">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
-            <QrCode size={17} className="text-black" />
-          </div>
+          <BrandLogo variant="icon" className="h-8 w-8 shrink-0" />
           <span className="font-bold text-lg tracking-tight text-white">
             Balik.In
           </span>

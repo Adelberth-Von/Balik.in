@@ -4,9 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, Phone, QrCode, Gamepad2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Gamepad2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -98,9 +99,7 @@ export default function RegisterPage() {
         {/* Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl shadow-sm p-8">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mx-auto mb-4">
-              <QrCode size={24} className="text-black" />
-            </div>
+            <BrandLogo variant="icon" priority className="mx-auto mb-4 h-12 w-12" />
             <h1 className="text-2xl font-bold text-white tracking-tight">Buat Akun</h1>
             <p className="text-zinc-400 text-sm mt-1">Bergabung dengan Balik.In sekarang</p>
           </div>

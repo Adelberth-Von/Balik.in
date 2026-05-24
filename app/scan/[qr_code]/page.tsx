@@ -14,6 +14,8 @@ import type { Item } from '@/lib/types';
 import { reverseGeocode } from '@/lib/utils/geocoding';
 import { useGeolocation } from '@/lib/hooks/useGeolocation';
 import dynamic from 'next/dynamic';
+import CategoryIcon from '@/components/ui/CategoryIcon';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 const MiniMap = dynamic(() => import('@/components/scan/MiniMap'), { ssr: false });
 
@@ -212,8 +214,8 @@ export default function ScanPage() {
         await supabase.from('notifications').insert({
           user_id: ownerItem.user_id,
           type: 'new_scan',
-          title: 'QR Dipindai! 📱',
-          body: `${CATEGORY_CONFIG[item.item_category].emoji} Barang kategori ${CATEGORY_CONFIG[item.item_category].label} kamu baru dipindai${locationName ? ` di ${locationName}` : ''}`,
+          title: 'QR Dipindai!',
+          body: `Barang kategori ${CATEGORY_CONFIG[item.item_category].label} kamu baru dipindai${locationName ? ` di ${locationName}` : ''}`,
           session_id: session.id,
           item_id: item.id,
         });
@@ -275,10 +277,8 @@ export default function ScanPage() {
       {/* Header - App Like */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-4 text-center sticky top-0 z-20">
         <div className="flex items-center justify-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-md">
-            <QrCode size={16} className="text-white" />
-          </div>
-          <span className="font-bold text-xl text-slate-900 dark:text-white tracking-tight">Balik<span className="text-primary-600">.In</span></span>
+          <BrandLogo variant="icon" className="h-8 w-8" />
+          <span className="font-bold text-xl text-slate-900 dark:text-white tracking-tight">Balik.In</span>
         </div>
       </div>
 
@@ -292,8 +292,8 @@ export default function ScanPage() {
           <div className="text-center mb-6">
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-primary-500 blur-xl opacity-20 rounded-full" />
-              <div className={`relative w-24 h-24 ${categoryInfo?.color} bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 text-5xl shadow-inner border border-white/50 dark:border-slate-700/50`}>
-                {categoryInfo?.emoji}
+              <div className={`relative w-24 h-24 ${categoryInfo?.color} bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-white/50 dark:border-slate-700/50`}>
+                <CategoryIcon category={item?.item_category} size={42} />
               </div>
             </div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">

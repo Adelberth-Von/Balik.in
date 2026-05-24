@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, QrCode, LogIn, UserPlus, Gamepad2 } from 'lucide-react';
+import { Menu, X, LogIn, UserPlus, Gamepad2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,13 +40,8 @@ export default function Navbar() {
     <nav className="fixed w-full top-0 z-50 bg-white dark:bg-[#0a0a0a] border-b-2 border-black dark:border-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
-              <QrCode size={20} className="text-white dark:text-black" />
-            </div>
-            <span className="font-black text-2xl tracking-tighter text-black dark:text-white uppercase">
-              BALIK.IN
-            </span>
+          <Link href="/" className="flex items-center" aria-label="Balik.In">
+            <BrandLogo variant="full" priority className="h-10 w-auto sm:h-11" />
           </Link>
 
           <div className="hidden md:flex items-center gap-6">

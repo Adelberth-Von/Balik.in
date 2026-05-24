@@ -6,7 +6,6 @@ import { Shield, MapPin, MessageSquare, Zap } from 'lucide-react';
 const FEATURES = [
   {
     icon: Shield,
-    emoji: '🔒',
     title: 'Privasi 100% Terjaga',
     description: 'Data pribadimu tidak pernah ditampilkan ke penemu. Komunikasi tetap anonim — pemilik dan penemu tidak tahu identitas satu sama lain.',
     color: 'text-blue-600',
@@ -14,7 +13,6 @@ const FEATURES = [
   },
   {
     icon: MapPin,
-    emoji: '📍',
     title: 'Lokasi GPS Akurat',
     description: 'Penemu bisa kirim lokasi GPS tepat di mana barang ditemukan. Tampil di peta real-time dengan detail alamat lengkap dari OpenStreetMap.',
     color: 'text-green-600',
@@ -22,7 +20,6 @@ const FEATURES = [
   },
   {
     icon: MessageSquare,
-    emoji: '💬',
     title: 'Chat Anonim Real-time',
     description: 'Ngobrol langsung dengan penemu tanpa buka identitas, kapan saja sampai barang kembali. Seperti WhatsApp, tapi anonim sepenuhnya.',
     color: 'text-purple-600',
@@ -30,7 +27,6 @@ const FEATURES = [
   },
   {
     icon: Zap,
-    emoji: '⚡',
     title: 'Notifikasi Instan',
     description: 'Langsung tahu detik itu juga saat QR barangmu dipindai oleh siapapun. Real-time via Supabase Realtime — tidak ada delay.',
     color: 'text-amber-600',
@@ -58,22 +54,25 @@ export default function Features() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURES.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="card p-6 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className={`w-14 h-14 ${feature.bg} rounded-2xl flex items-center justify-center text-2xl mb-4`}>
-                {feature.emoji}
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{feature.description}</p>
-            </motion.div>
-          ))}
+          {FEATURES.map((feature, i) => {
+            const Icon = feature.icon;
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="card p-6 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className={`w-14 h-14 ${feature.bg} ${feature.color} rounded-2xl flex items-center justify-center mb-4`}>
+                  <Icon size={26} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{feature.description}</p>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

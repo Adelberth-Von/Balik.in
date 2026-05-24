@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, MapPin, ArrowLeft, CheckCircle2, Star, Loader2,
-  QrCode, Shield, X, Check, CheckCheck, ImagePlus, Camera
+  Shield, X, Check, CheckCheck, ImagePlus, Camera
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { CATEGORY_CONFIG } from '@/lib/types';
@@ -15,6 +15,7 @@ import { formatTime } from '@/lib/utils/formatters';
 import { reverseGeocode } from '@/lib/utils/geocoding';
 import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
+import CategoryIcon from '@/components/ui/CategoryIcon';
 
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
@@ -410,7 +411,7 @@ export default function ChatPage() {
         await supabase.from('notifications').insert({
           user_id: item.user_id,
           type: 'new_message',
-          title: 'Pesan Baru 💬',
+          title: 'Pesan Baru',
           body: `Penemu barang kamu mengirim pesan: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`,
           session_id: session.id,
           item_id: item.id,
@@ -449,7 +450,7 @@ export default function ChatPage() {
           session_id: session.id,
           sender_role: 'system',
           message_type: 'system',
-          message: `📍 ${isOwner ? 'Pemilik' : 'Penemu'} berbagi lokasi baru`,
+          message: `${isOwner ? 'Pemilik' : 'Penemu'} berbagi lokasi baru`,
         };
 
         if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
@@ -524,7 +525,9 @@ export default function ChatPage() {
       session_id: session.id,
       sender_role: 'system',
       message_type: 'system',
-      message: `✅ ${isOwner ? 'Pemilik mengkonfirmasi barang sudah kembali' : 'Penemu mengkonfirmasi barang sudah dikembalikan'}`,
+      message: isOwner
+        ? 'Pemilik mengkonfirmasi barang sudah kembali'
+        : 'Penemu mengkonfirmasi barang sudah dikembalikan',
     });
 
     if (isOwner && item) {
@@ -609,8 +612,8 @@ export default function ChatPage() {
           </button>
         )}
         <div className="relative">
-          <div className="w-10 h-10 bg-gradient-to-tr from-primary-500 to-blue-400 rounded-full flex items-center justify-center text-xl shadow-sm text-white">
-            {categoryInfo?.emoji}
+          <div className="w-10 h-10 bg-gradient-to-tr from-primary-500 to-blue-400 rounded-full flex items-center justify-center shadow-sm text-white">
+            <CategoryIcon category={item.item_category} size={21} />
           </div>
           <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 ${
             session.status === 'open' ? 'bg-green-500' : 'bg-slate-400'
@@ -621,7 +624,7 @@ export default function ChatPage() {
             {isOwner ? 'Penemu Anonim' : 'Pemilik Barang'}
           </div>
           <div className="text-slate-500 dark:text-slate-400 text-xs truncate">
-            {session.status === 'open' ? 'Sedang aktif' : 'Sesi selesai'} • {categoryInfo?.label}
+            {session.status === 'open' ? 'Sedang aktif' : 'Sesi selesai'} - {categoryInfo?.label}
           </div>
         </div>
       </div>

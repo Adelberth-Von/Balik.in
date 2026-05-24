@@ -1,13 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Star } from 'lucide-react';
+import { Check, KeyRound, Package, Tag } from 'lucide-react';
 import Link from 'next/link';
 
 const PLANS = [
   {
     name: 'Stiker QR',
-    emoji: '🏷️',
+    icon: Tag,
     price: 25000,
     desc: '1 lembar isi 3 stiker QR unik',
     features: ['Tahan air', 'Mudah ditempel', 'QR aktif selamanya', 'Support chat anonim'],
@@ -17,23 +17,23 @@ const PLANS = [
   },
   {
     name: 'Gantungan Kunci QR',
-    emoji: '🔑',
+    icon: KeyRound,
     price: 20000,
     desc: '1 gantungan kunci dengan QR unik',
     features: ['Material ABS kuat', 'Cocok untuk tas & kunci', 'QR aktif selamanya', 'Desain premium'],
     popular: true,
-    badge: '⭐ PALING LARIS',
+    badge: 'PALING LARIS',
     btnClass: 'btn-primary',
   },
   {
     name: 'Paket Bundling',
-    emoji: '📦',
+    icon: Package,
     price: 55000,
     originalPrice: 70000,
     desc: '2 lembar stiker + 1 gantungan kunci',
     features: ['Hemat Rp 15.000', 'Paling lengkap', 'Mix stiker & gantungan', 'Cocok untuk semua barang'],
     popular: false,
-    badge: '💰 HEMAT',
+    badge: 'HEMAT',
     btnClass: 'btn-outline',
   },
 ];
@@ -77,7 +77,7 @@ export default function Pricing() {
                 </div>
               )}
 
-              <div className="text-4xl mb-4">{plan.emoji}</div>
+              <plan.icon size={34} className="mb-4 text-white" />
               <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
               <p className="text-zinc-400 text-sm mb-6">{plan.desc}</p>
 
