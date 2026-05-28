@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid REFERENCES scan_sessions(id) ON DELETE CASCADE,
   sender_role varchar NOT NULL CHECK (sender_role IN ('system','owner','finder')),
-  message_type varchar NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','location','image')),
+  message_type varchar NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','location','system','image')),
   message text NOT NULL,
   location_lat decimal(10,8),
   location_lng decimal(11,8),

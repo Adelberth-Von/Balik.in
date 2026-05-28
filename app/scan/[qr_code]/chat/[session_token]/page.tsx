@@ -21,6 +21,18 @@ const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false 
 
 const isDemoQr = (qrCode: string) => qrCode.startsWith('BALIK-DEMO-');
 
+const createDemoItem = (qrCode: string) => {
+  const demoId = qrCode.replace('BALIK-DEMO-', '');
+  return {
+    id: demoId,
+    user_id: 'demo123',
+    item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
+    item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
+    qr_code: qrCode,
+    status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
+  };
+};
+
 const normalizeDemoMessages = (messages: ChatMessage[]) =>
   messages.map((message) => ({
     ...message,
@@ -41,6 +53,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [demoChat, setDemoChat] = useState(false);
   const [sending, setSending] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -70,61 +83,55 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const init = async () => {
-    if (isDemoQr(qrCode)) {
-      const demoId = qrCode.replace('BALIK-DEMO-', '');
-      const mockItemData = {
-        id: demoId,
-        user_id: 'demo123',
-        item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-        item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
-        qr_code: qrCode,
-        status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
-      };
-      
-      const mockSessionData = {
-        id: 'mock-session-id',
-        session_token: sessionToken,
-        item_id: demoId,
-        status: 'open',
-        finder_location_name: 'Lokasi Demo',
-        items: mockItemData,
-      };
+  const loadDemoChat = async () => {
+    if (!isDemoQr(qrCode)) return false;
 
-      setSession(mockSessionData as any);
-      setItem(mockItemData as any);
-      setIsOwner(roleParam !== 'finder'); 
-      
-      // Try to load from server API for cross-browser Demo mode
-      try {
-        const res = await fetch(`/api/demo?token=${sessionToken}`);
-        const savedChat = await res.json();
-        if (savedChat && savedChat.length > 0) {
-          setMessages(normalizeDemoMessages(savedChat));
-          setLoading(false);
-          return;
-        }
-      } catch {}
-      
-      // Fallback to local storage (legacy)
-      const savedChatLocal = localStorage.getItem(`baljn_demo_chat_${sessionToken}`);
-      if (savedChatLocal) {
-        try {
-          setMessages(JSON.parse(savedChatLocal));
-          setLoading(false);
-          return;
-        } catch {}
+    const demoId = qrCode.replace('BALIK-DEMO-', '');
+    const mockItemData = createDemoItem(qrCode);
+    const mockSessionData = {
+      id: 'mock-session-id',
+      session_token: sessionToken,
+      item_id: demoId,
+      status: 'open',
+      finder_location_name: 'Lokasi Demo',
+      items: mockItemData,
+    };
+
+    setDemoChat(true);
+    setSession(mockSessionData as any);
+    setItem(mockItemData as any);
+    setIsOwner(roleParam !== 'finder');
+
+    // Try to load from server API for cross-browser Demo mode
+    try {
+      const res = await fetch(`/api/demo?token=${sessionToken}`);
+      const savedChat = await res.json();
+      if (savedChat && savedChat.length > 0) {
+        setMessages(normalizeDemoMessages(savedChat));
+        return true;
       }
+    } catch {}
 
-      setMessages([
-        { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', is_read: true, created_at: new Date().toISOString() },
-        { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', is_read: false, created_at: new Date().toISOString() }
-      ] as any);
-      
-      setLoading(false);
-      return;
+    // Fallback to local storage (legacy)
+    const savedChatLocal = localStorage.getItem(`baljn_demo_chat_${sessionToken}`);
+    if (savedChatLocal) {
+      try {
+        setMessages(normalizeDemoMessages(JSON.parse(savedChatLocal)));
+        return true;
+      } catch {}
     }
 
+    setMessages([
+      { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', is_read: true, created_at: new Date().toISOString() },
+      { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', is_read: false, created_at: new Date().toISOString() }
+    ] as any);
+
+    return true;
+  };
+
+  const init = async () => {
+    setLoading(true);
+    setDemoChat(false);
     try {
       const authPromise = supabase.auth.getUser();
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -138,16 +145,21 @@ export default function ChatPage() {
         .from('scan_sessions')
         .select('*, items(*)')
         .eq('session_token', sessionToken)
-        .single();
+        .maybeSingle();
 
-      if (sessionError || !sessionData) {
-        setLoading(false);
+      if (sessionError) {
+        console.error('Chat session query error:', sessionError);
+      }
+
+      if (!sessionData) {
+        if (await loadDemoChat()) return;
         return;
       }
 
       setSession(sessionData);
       const itemData = sessionData.items as Item;
       setItem(itemData);
+      setDemoChat(false);
 
       // Determine if viewer is owner
       if (user && itemData.user_id === user.id) {
@@ -178,6 +190,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Chat init error:', error);
+      if (await loadDemoChat()) return;
     } finally {
       setLoading(false);
     }
@@ -185,7 +198,7 @@ export default function ChatPage() {
 
   // Real-time new messages and updates
   useChatRealtime(
-    session && !isDemoQr(qrCode) ? session.id : null, 
+    session && !demoChat ? session.id : null,
     (newMsg) => {
       setMessages((prev) => {
         if (prev.find((m) => m.id === newMsg.id)) return prev;
@@ -200,7 +213,7 @@ export default function ChatPage() {
 
   // LocalStorage sync for Demo Mode
   useEffect(() => {
-    if (!isDemoQr(qrCode)) return;
+    if (!demoChat) return;
     
     const handleStorage = (e: StorageEvent) => {
       if (e.key === `baljn_demo_chat_${sessionToken}`) {
@@ -214,7 +227,7 @@ export default function ChatPage() {
     
     // Auto-refresh chat for demo mode cross-browser sync
     const interval = setInterval(async () => {
-      if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+      if (demoChat) {
         try {
           const res = await fetch(`/api/demo?token=${sessionToken}`);
           const parsed = await res.json();
@@ -234,7 +247,7 @@ export default function ChatPage() {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
     };
-  }, [qrCode, sessionToken]);
+  }, [demoChat, sessionToken]);
 
   // Mark messages as read
   useEffect(() => {
@@ -251,7 +264,7 @@ export default function ChatPage() {
         )
       );
 
-      if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+      if (demoChat) {
         fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) });
       } else {
         supabase.from('chat_messages').update({ is_read: true })
@@ -262,7 +275,7 @@ export default function ChatPage() {
           .then();
       }
     }
-  }, [messages, session, isOwner, sessionToken, qrCode, supabase]);
+  }, [messages, session, isOwner, sessionToken, demoChat, supabase]);
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -282,7 +295,7 @@ export default function ChatPage() {
     try {
       let imageUrl = await fileToDataUrl(file);
 
-      if (!sessionToken.startsWith('tok_') && !qrCode.startsWith('BALIK-DEMO-')) {
+      if (!demoChat) {
         const ext = file.name.split('.').pop() || 'jpg';
         const filePath = `${session.id}/${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -316,7 +329,7 @@ export default function ChatPage() {
         image_url: imageUrl,
       };
 
-      if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+      if (demoChat) {
         await fetch('/api/demo', {
           method: 'POST',
           body: JSON.stringify({
@@ -360,7 +373,7 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, optimistic]);
 
     // DEMO MODE: Store in API
-    if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+    if (demoChat) {
       const newMsg = {
         id: `m${Date.now()}`,
         session_id: sessionToken,
@@ -453,7 +466,7 @@ export default function ChatPage() {
           message: `${isOwner ? 'Pemilik' : 'Penemu'} berbagi lokasi baru`,
         };
 
-        if (sessionToken.startsWith('tok_') || qrCode.startsWith('BALIK-DEMO-')) {
+        if (demoChat) {
           locationMsg.id = `m${Date.now()}`;
           locationMsg.created_at = new Date().toISOString();
           locationMsg.session_id = sessionToken;
@@ -494,7 +507,7 @@ export default function ChatPage() {
 
   const handleConfirmReturn = async () => {
     if (!session) return;
-    if (sessionToken.startsWith('tok_') || isDemoQr(qrCode)) {
+    if (demoChat) {
       const systemMsg: ChatMessage = {
         id: `m-return-${Date.now()}`,
         session_id: sessionToken,
@@ -552,7 +565,7 @@ export default function ChatPage() {
 
   const handleRating = async () => {
     if (!session) return;
-    if (sessionToken.startsWith('tok_') || isDemoQr(qrCode)) {
+    if (demoChat) {
       toast.success('Rating prototype tersimpan.');
       setShowRating(false);
       return;

@@ -15,7 +15,7 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isDemoMode = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
+  const isDemoMode = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemoMode) {
     return (

@@ -76,7 +76,7 @@ export default function TambahBarangPage() {
     try {
       const isDemo =
         document.cookie.includes('demo_mode=true') ||
-        user?.email === 'admin@balik.in';
+        user?.email === 'demo@balik.in';
 
       if (isDemo) {
         const demoId = `demo-${Date.now()}`;

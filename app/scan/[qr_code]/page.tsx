@@ -21,6 +21,28 @@ const MiniMap = dynamic(() => import('@/components/scan/MiniMap'), { ssr: false 
 
 type PageState = 'loading' | 'found' | 'submitted' | 'not_found';
 
+const isDemoQr = (code: string) => code.startsWith('BALIK-DEMO-');
+
+const createDemoItem = (qrCode: string): Item => {
+  const demoId = qrCode.replace('BALIK-DEMO-', '');
+  return {
+    id: demoId,
+    user_id: 'demo123',
+    item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
+    item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
+    qr_code: qrCode,
+    status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    contact_preference: 'both',
+    reward_offered: demoId === '2',
+    reward_amount: demoId === '2' ? 50000 : undefined,
+    reward_message: demoId === '2' ? 'Tolong kembalikan' : undefined,
+    total_scans: demoId === '1' ? 0 : 3,
+  } as Item;
+};
+
 export default function ScanPage() {
   const params = useParams();
   const router = useRouter();
@@ -59,45 +81,37 @@ export default function ScanPage() {
   }, [geo.latitude, geo.longitude]);
 
   const fetchItem = async () => {
-    if (qrCode.startsWith('BALIK-DEMO-')) {
-      const demoId = qrCode.replace('BALIK-DEMO-', '');
-      setItem({
-        id: demoId,
-        user_id: 'demo123',
-        item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-        item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
-        qr_code: qrCode,
-        status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        contact_preference: 'both',
-        reward_offered: demoId === '2',
-        reward_amount: demoId === '2' ? 50000 : null,
-        reward_message: demoId === '2' ? 'Tolong kembalikan' : null,
-        total_scans: demoId === '1' ? 0 : 3
-      } as any);
-      setPageState('found');
-      return;
-    }
-
     const { data, error } = await supabase
       .from('items')
       .select('*')
       .eq('qr_code', qrCode)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error('[SCAN] Gagal membaca item dari Supabase:', error);
       setPageState('not_found');
-    } else {
-      setItem(data);
-      setPageState('found');
-      // Increment scan count
-      await supabase
-        .from('items')
-        .update({ total_scans: (data.total_scans || 0) + 1, last_scanned_at: new Date().toISOString() })
-        .eq('qr_code', qrCode);
+      return;
     }
+
+    if (!data) {
+      if (isDemoQr(qrCode)) {
+        setItem(createDemoItem(qrCode));
+        setPageState('found');
+        return;
+      }
+
+      setPageState('not_found');
+      return;
+    }
+
+    setItem(data);
+    setPageState('found');
+    // Increment scan count
+    await supabase
+      .from('items')
+      .update({ total_scans: (data.total_scans || 0) + 1, last_scanned_at: new Date().toISOString() })
+      .eq('qr_code', qrCode);
   };
 
   const handleShareLocation = () => {
@@ -112,12 +126,12 @@ export default function ScanPage() {
     try {
       let token = crypto.randomUUID();
 
-      if (qrCode.startsWith('BALIK-DEMO-')) {
+      if (isDemoQr(qrCode) && item.user_id === 'demo123') {
         // Link demo items to their hardcoded tokens in the dashboard mock!
         const demoId = qrCode.replace('BALIK-DEMO-', '');
         token = demoId === '2' ? 'tok_1' : `tok_demo_${demoId}`;
         
-        const initialMessages: any[] = [
+        const initialMessages: Array<Record<string, unknown>> = [
           { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: `Sesi chat dimulai - ${new Date().toLocaleString('id-ID')}`, is_read: true, created_at: new Date().toISOString() },
           { id: 'm2', session_id: token, sender_role: 'finder', message_type: 'text', message: message, is_read: false, created_at: new Date().toISOString() }
         ];
@@ -175,7 +189,7 @@ export default function ScanPage() {
       if (sessionError) throw sessionError;
 
       // Send initial system message
-      await supabase.from('chat_messages').insert([
+      const { error: messageError } = await supabase.from('chat_messages').insert([
         {
           session_id: session.id,
           sender_role: 'system',
@@ -190,9 +204,11 @@ export default function ScanPage() {
         },
       ]);
 
+      if (messageError) throw messageError;
+
       // If location shared, send location message
       if (geo.latitude && geo.longitude) {
-        await supabase.from('chat_messages').insert({
+        const { error: locationError } = await supabase.from('chat_messages').insert({
           session_id: session.id,
           sender_role: 'finder',
           message_type: 'location',
@@ -201,6 +217,7 @@ export default function ScanPage() {
           location_lng: geo.longitude,
           location_name: locationName,
         });
+        if (locationError) throw locationError;
       }
 
       // Create notification for owner

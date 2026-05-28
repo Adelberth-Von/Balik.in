@@ -12,7 +12,7 @@ export default async function BarangPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
+  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemo) {
     return <ItemsClient items={[

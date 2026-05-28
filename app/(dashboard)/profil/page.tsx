@@ -12,7 +12,7 @@ export default async function ProfilPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'admin@balik.in';
+  const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemo) {
     return <ProfilClient profile={{ id: 'demo123', full_name: 'Sobat Demo', email: 'demo@balik.in', phone_number: '08123456789' } as any} userId="demo123" />;

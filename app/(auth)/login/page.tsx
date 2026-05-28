@@ -9,8 +9,8 @@ import toast from 'react-hot-toast';
 import BrandLogo from '@/components/layout/BrandLogo';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@balik.in');
-  const [password, setPassword] = useState('admin1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -30,34 +30,13 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      if (email === 'admin@balik.in' && password === 'admin1234') {
-        document.cookie = 'demo_mode=true; path=/; max-age=86400';
-        toast.success('Berhasil masuk!');
-        window.location.href = '/dashboard';
-        return;
-      }
-
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       document.cookie = 'demo_mode=; path=/; max-age=0';
       toast.success('Berhasil masuk!');
       window.location.href = '/dashboard';
-    } catch (err: any) {
-      // Fitur khusus presentasi: Auto-register jika akun admin belum ada
-      if (email === 'admin@balik.in' && (err.message === 'Invalid login credentials' || err.message.includes('Invalid'))) {
-        const { error: regError } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: { data: { full_name: 'Admin Balik.in' } }
-        });
-        if (!regError) {
-          toast.success('Akun otomatis dibuat untuk presentasi!');
-          window.location.href = '/dashboard';
-          return;
-        }
-      }
-
-      const message = err.message || 'Email atau password salah';
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Email atau password salah';
       toast.error(message === 'Invalid login credentials' ? 'Email atau password salah' : message);
     } finally {
       setLoading(false);
