@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || anonKey;
+  const runtimeEnv = process.env as Record<string, string | undefined>;
+  const url = runtimeEnv['NEXT_PUBLIC_SUPABASE_URL'];
+  const anonKey = runtimeEnv['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+  const serverKey = runtimeEnv['SUPABASE_SERVICE_ROLE_KEY'] || anonKey;
 
   if (!url || !anonKey || !serverKey) {
     return NextResponse.json(

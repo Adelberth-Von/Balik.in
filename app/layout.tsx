@@ -33,9 +33,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const runtimeEnv = process.env as Record<string, string | undefined>;
   const supabaseRuntimeConfig = {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    url: runtimeEnv['NEXT_PUBLIC_SUPABASE_URL'] || '',
+    anonKey: runtimeEnv['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || '',
   };
 
   return (
