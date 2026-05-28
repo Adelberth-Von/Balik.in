@@ -6,6 +6,8 @@ import CustomCursor from '@/components/ui/CustomCursor';
 
 const inter = Inter({ subsets: ['latin'] });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Balik.In — Barang Tertinggal? Balikin Aja!',
   description:
@@ -31,6 +33,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const supabaseRuntimeConfig = {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+  };
+
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
@@ -39,6 +46,11 @@ export default function RootLayout({
         <link
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__BALIK_SUPABASE__=${JSON.stringify(supabaseRuntimeConfig).replace(/</g, '\\u003c')};`,
+          }}
         />
         <script
           dangerouslySetInnerHTML={{
