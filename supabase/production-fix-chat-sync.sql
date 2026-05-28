@@ -19,6 +19,22 @@ ALTER TABLE IF EXISTS public.scan_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- PostgREST still needs table privileges. RLS policies decide which rows
+-- are allowed after these grants are present.
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON public.items TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.scan_sessions TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.chat_messages TO anon;
+GRANT INSERT ON public.notifications TO anon;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.items TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.item_status_history TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.scan_sessions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_messages TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.qr_orders TO authenticated;
+
 DROP POLICY IF EXISTS "items_public_read_by_qr" ON public.items;
 CREATE POLICY "items_public_read_by_qr" ON public.items
   FOR SELECT

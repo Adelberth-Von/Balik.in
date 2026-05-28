@@ -139,6 +139,21 @@ ALTER TABLE scan_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
+-- PostgREST privileges. RLS policies still control row access.
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON items TO anon;
+GRANT SELECT, INSERT, UPDATE ON scan_sessions TO anon;
+GRANT SELECT, INSERT, UPDATE ON chat_messages TO anon;
+GRANT INSERT ON notifications TO anon;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON users TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON items TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON item_status_history TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON scan_sessions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON chat_messages TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON qr_orders TO authenticated;
+
 -- Allow anonymous users (finders) to insert scan sessions
 CREATE POLICY "Allow public insert to scan_sessions" 
   ON scan_sessions FOR INSERT TO public 
