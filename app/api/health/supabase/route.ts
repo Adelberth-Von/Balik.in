@@ -1,6 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+async function checkRestTable(url: string, key: string, table: string) {
+  const response = await fetch(`${url}/rest/v1/${table}?select=id&limit=1`, {
+    method: 'GET',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (response.ok) return { ok: true, message: `${table} REST access ok.` };
+
+  let message = `${table} REST access failed with ${response.status}.`;
+  try {
+    const body = await response.json();
+    message = body.message || message;
+  } catch {}
+
+  return { ok: false, message };
+}
+
 export async function GET() {
   const runtimeEnv = process.env as Record<string, string | undefined>;
   const url = runtimeEnv['NEXT_PUBLIC_SUPABASE_URL'];
@@ -46,22 +68,32 @@ export async function GET() {
 
   const serverFailed = serverChecks.find((result) => result.error);
   const publicFailed = publicChecks.find((result) => result.error);
-  const failed = serverFailed || publicFailed;
+  const publicRestChecks = await Promise.all([
+    checkRestTable(url, anonKey, 'items'),
+    checkRestTable(url, anonKey, 'scan_sessions'),
+    checkRestTable(url, anonKey, 'chat_messages'),
+  ]);
+  const publicRestFailed = publicRestChecks.find((result) => !result.ok);
+  const failed = serverFailed || publicFailed || publicRestFailed;
 
-  if (failed?.error) {
+  if (failed) {
     return NextResponse.json(
       {
         ok: false,
         mode: 'database-error',
-        message: failed.error.message,
+        message: 'Supabase belum bisa diakses lengkap oleh browser/public client.',
         checks: {
           server: {
             ok: !serverFailed,
             message: serverFailed?.error?.message || 'Server/service access ok.',
           },
           public: {
-            ok: !publicFailed,
-            message: publicFailed?.error?.message || 'Public anon access ok.',
+            ok: !publicFailed && !publicRestFailed,
+            message:
+              publicFailed?.error?.message ||
+              publicRestFailed?.message ||
+              'Public anon access ok.',
+            rest: publicRestChecks,
           },
         },
         elapsed_ms: Date.now() - startedAt,
@@ -76,7 +108,7 @@ export async function GET() {
     message: 'Supabase tersambung dan tabel utama bisa diakses oleh server serta public anon client.',
     checks: {
       server: { ok: true, message: 'Server/service access ok.' },
-      public: { ok: true, message: 'Public anon access ok.' },
+      public: { ok: true, message: 'Public anon access ok.', rest: publicRestChecks },
     },
     elapsed_ms: Date.now() - startedAt,
   });
