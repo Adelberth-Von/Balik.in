@@ -133,6 +133,22 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ============================================================
+-- QR ORDERS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS qr_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id),
+  package_type varchar NOT NULL
+    CHECK (package_type IN ('stiker','gantungan','bundling')),
+  quantity integer NOT NULL,
+  unit_price integer NOT NULL,
+  total_price integer NOT NULL,
+  status varchar DEFAULT 'pending'
+    CHECK (status IN ('pending','paid','processing','shipped','delivered')),
+  created_at timestamp DEFAULT now()
+);
+
+-- ============================================================
 -- RLS POLICIES FOR PUBLIC ACCESS
 -- ============================================================
 ALTER TABLE scan_sessions ENABLE ROW LEVEL SECURITY;
@@ -203,22 +219,6 @@ CREATE POLICY "Allow owners to view notifications"
 CREATE POLICY "Allow owners to update notifications" 
   ON notifications FOR UPDATE TO authenticated 
   USING (user_id = auth.uid());
-
--- ============================================================
--- QR ORDERS
--- ============================================================
-CREATE TABLE IF NOT EXISTS qr_orders (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES users(id),
-  package_type varchar NOT NULL
-    CHECK (package_type IN ('stiker','gantungan','bundling')),
-  quantity integer NOT NULL,
-  unit_price integer NOT NULL,
-  total_price integer NOT NULL,
-  status varchar DEFAULT 'pending'
-    CHECK (status IN ('pending','paid','processing','shipped','delivered')),
-  created_at timestamp DEFAULT now()
-);
 
 -- ============================================================
 -- INDEXES for performance
