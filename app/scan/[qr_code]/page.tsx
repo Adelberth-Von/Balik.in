@@ -16,6 +16,7 @@ import { useGeolocation } from '@/lib/hooks/useGeolocation';
 import dynamic from 'next/dynamic';
 import CategoryIcon from '@/components/ui/CategoryIcon';
 import BrandLogo from '@/components/layout/BrandLogo';
+import { readPrototypeItems } from '@/lib/utils/demo-items';
 
 const MiniMap = dynamic(() => import('@/components/scan/MiniMap'), { ssr: false });
 
@@ -96,7 +97,8 @@ export default function ScanPage() {
 
     if (!data) {
       if (isDemoQr(qrCode)) {
-        setItem(createDemoItem(qrCode));
+        const storedDemoItem = readPrototypeItems().find((candidate) => candidate.qr_code === qrCode);
+        setItem(storedDemoItem || createDemoItem(qrCode));
         setPageState('found');
         return;
       }
@@ -144,12 +146,18 @@ export default function ScanPage() {
         }
 
         const sessionPayload = {
-          id: token, item_id: demoId, session_token: token, 
+          id: token, item_id: item.id || demoId, session_token: token,
           finder_latitude: geo.latitude || null,
           finder_longitude: geo.longitude || null,
           finder_location_name: locationName || manualLocation || 'Lokasi Penemu', 
           status: 'open', is_read_by_owner: false, created_at: new Date().toISOString(),
-          items: { id: demoId, user_id: 'demo123', item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor', item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci', qr_code: qrCode }
+          items: {
+            id: item.id || demoId,
+            user_id: 'demo123',
+            item_name: item.item_name,
+            item_category: item.item_category,
+            qr_code: qrCode,
+          }
         };
 
         // Sync to Server memory API for Incognito cross-browser demo support!

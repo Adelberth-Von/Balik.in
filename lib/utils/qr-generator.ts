@@ -8,6 +8,10 @@ export function generateQrCode(): string {
 }
 
 export function getQrUrl(qrCode: string): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin.replace(/\/$/, '')}/scan/${qrCode}`;
+  }
+
   let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   
   // Vercel auto-populates NEXT_PUBLIC_VERCEL_URL

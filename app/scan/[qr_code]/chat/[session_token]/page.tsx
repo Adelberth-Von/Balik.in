@@ -87,8 +87,18 @@ export default function ChatPage() {
     if (!isDemoQr(qrCode)) return false;
 
     const demoId = qrCode.replace('BALIK-DEMO-', '');
-    const mockItemData = createDemoItem(qrCode);
-    const mockSessionData = {
+    let savedSession: (ScanSession & { items?: Item }) | null = null;
+
+    try {
+      const sessionRes = await fetch('/api/demo');
+      const demoSessions = await sessionRes.json();
+      if (Array.isArray(demoSessions)) {
+        savedSession = demoSessions.find((candidate) => candidate.session_token === sessionToken) || null;
+      }
+    } catch {}
+
+    const mockItemData = (savedSession?.items as Item | undefined) || createDemoItem(qrCode);
+    const mockSessionData = savedSession || {
       id: 'mock-session-id',
       session_token: sessionToken,
       item_id: demoId,
