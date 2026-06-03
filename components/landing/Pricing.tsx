@@ -6,35 +6,48 @@ import Link from 'next/link';
 
 const PLANS = [
   {
-    name: 'Stiker QR',
+    name: 'Gratis',
     icon: Tag,
-    price: 25000,
-    desc: '1 lembar isi 3 stiker QR unik',
-    features: ['Tahan air', 'Mudah ditempel', 'QR aktif selamanya', 'Support chat anonim'],
+    price: 'Rp0',
+    desc: 'Untuk mencoba fitur dasar Balik.In.',
+    features: ['1 barang aktif', 'Generate 1 QR', 'Chat anonim dasar', 'Dashboard pengguna'],
     popular: false,
     badge: null,
     btnClass: 'btn-outline',
+    cta: 'Mulai Gratis',
   },
   {
-    name: 'Gantungan Kunci QR',
+    name: 'Personal',
     icon: KeyRound,
-    price: 20000,
-    desc: '1 gantungan kunci dengan QR unik',
-    features: ['Material ABS kuat', 'Cocok untuk tas & kunci', 'QR aktif selamanya', 'Desain premium'],
+    price: 'Rp25.000 / tahun',
+    desc: 'Untuk pengguna pribadi yang ingin melindungi beberapa barang.',
+    features: ['Hingga 5 barang aktif', 'Generate QR unik', 'Download QR PNG/PDF', 'Chat anonim', 'Riwayat scan', 'Notifikasi'],
     popular: true,
-    badge: 'PALING LARIS',
+    badge: 'Paling Cocok',
     btnClass: 'btn-primary',
+    cta: 'Pilih Personal',
   },
   {
-    name: 'Paket Bundling',
+    name: 'Pro',
     icon: Package,
-    price: 55000,
-    originalPrice: 70000,
-    desc: '2 lembar stiker + 1 gantungan kunci',
-    features: ['Hemat Rp 15.000', 'Paling lengkap', 'Mix stiker & gantungan', 'Cocok untuk semua barang'],
+    price: 'Rp50.000 / tahun',
+    desc: 'Untuk pengguna yang membawa banyak barang dan butuh kontrol lebih.',
+    features: ['Hingga 15 barang aktif', 'Custom label QR', 'Download template print', 'Riwayat scan lengkap', 'Prioritas notifikasi'],
     popular: false,
-    badge: 'HEMAT',
+    badge: null,
     btnClass: 'btn-outline',
+    cta: 'Pilih Pro',
+  },
+  {
+    name: 'Organisasi',
+    icon: Tag,
+    price: 'Mulai Rp250.000 / bulan',
+    desc: 'Untuk BEM, himpunan, lab, perpustakaan, sekolah, kampus, atau kantor.',
+    features: ['Bulk generate QR', 'Dashboard admin', 'Banyak akun/barang', 'Export data', 'Manajemen barang temuan'],
+    popular: false,
+    badge: null,
+    btnClass: 'btn-outline',
+    cta: 'Hubungi Kami',
   },
 ];
 
@@ -49,8 +62,8 @@ export default function Pricing() {
           className="text-center mb-14"
         >
           <span className="text-primary-600 font-semibold text-sm uppercase tracking-wider">Produk</span>
-          <h2 className="text-4xl font-black text-slate-900 dark:text-white mt-2 mb-3">Pilih Paket Pilihanmu</h2>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">Harga terjangkau, perlindungan maksimal untuk barang berhargamu.</p>
+          <h2 className="text-4xl font-black text-slate-900 dark:text-white mt-2 mb-3">Pilih Paket Akses</h2>
+          <p className="text-lg text-slate-500 max-w-xl mx-auto">Pilih akses digital untuk membuat QR Balik.In sesuai kebutuhanmu.</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -84,14 +97,9 @@ export default function Pricing() {
               <div className="mb-6">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-white">
-                    Rp {plan.price.toLocaleString('id-ID')}
+                    {plan.price}
                   </span>
                 </div>
-                {'originalPrice' in plan && plan.originalPrice && (
-                  <span className="text-zinc-500 line-through text-sm">
-                    Rp {plan.originalPrice.toLocaleString('id-ID')}
-                  </span>
-                )}
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -107,11 +115,15 @@ export default function Pricing() {
                 href="/register"
                 className={`${plan.btnClass} w-full flex items-center justify-center py-3 rounded-full font-semibold transition-all`}
               >
-                Pesan Sekarang
+                {plan.cta}
               </Link>
             </motion.div>
           ))}
         </div>
+
+        <p className="text-center text-sm text-slate-500 mt-8 max-w-2xl mx-auto">
+          Tidak mau repot print sendiri? Balik.In juga menyediakan layanan cetak opsional untuk stiker, label, dan gantungan QR siap pakai.
+        </p>
       </div>
     </section>
   );
