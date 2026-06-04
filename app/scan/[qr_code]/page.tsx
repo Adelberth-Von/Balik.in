@@ -30,9 +30,6 @@ const getDemoIdFromQr = (code: string) =>
     ? code.replace('BALIK-DEMO-', '')
     : code.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
 
-const getDemoSessionToken = (code: string) =>
-  `demo_${code.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
-
 const postDemoEvent = (type: string, payload: Record<string, unknown>) =>
   fetch('/api/demo', {
     method: 'POST',
@@ -161,7 +158,11 @@ export default function ScanPage() {
   // Check localStorage for existing session
   useEffect(() => {
     const stored = localStorage.getItem(`baljn_session_${qrCode}`);
-    if (stored) {
+    const isDashboardDemo = document.cookie.includes('demo_mode=true');
+
+    if (stored && isDashboardDemo && isDemoQr(qrCode)) {
+      localStorage.removeItem(`baljn_session_${qrCode}`);
+    } else if (stored) {
       // Redirect to existing chat
       router.replace(`/scan/${qrCode}/chat/${stored}?role=finder`);
       return;
@@ -183,7 +184,7 @@ export default function ScanPage() {
 
       if (isDemoQr(qrCode)) {
         const demoId = getDemoIdFromQr(qrCode);
-        token = getDemoSessionToken(qrCode);
+        token = `demo_${crypto.randomUUID()}`;
         
         const initialMessages: Array<Record<string, unknown>> = [
           { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: `Sesi chat dimulai - ${new Date().toLocaleString('id-ID')}`, is_read: true, created_at: new Date().toISOString() },
