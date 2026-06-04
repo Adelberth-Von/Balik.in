@@ -104,6 +104,21 @@ export default function ScanPage() {
 
   const geo = useGeolocation();
 
+  const resolveDemoItem = useCallback(async () => {
+    const storedDemoItem = readPrototypeItems().find((candidate) => candidate.qr_code === qrCode);
+    if (storedDemoItem) return storedDemoItem;
+
+    try {
+      const response = await fetch(`/api/demo/items?qr_code=${encodeURIComponent(qrCode)}`, {
+        cache: 'no-store',
+      });
+      const parsed = await response.json();
+      if (response.ok && parsed?.item) return parsed.item as Item;
+    } catch {}
+
+    return createDemoItem(qrCode);
+  }, [qrCode]);
+
   // Reverse geocode when GPS obtained
   useEffect(() => {
     if (geo.latitude && geo.longitude && !locationName) {
@@ -124,8 +139,7 @@ export default function ScanPage() {
     if (error) {
       console.error('[SCAN] Gagal membaca item dari Supabase:', error);
       if (isDemoQr(qrCode)) {
-        const storedDemoItem = readPrototypeItems().find((candidate) => candidate.qr_code === qrCode);
-        setItem(storedDemoItem || createDemoItem(qrCode));
+        setItem(await resolveDemoItem());
         setPageState('found');
         return;
       }
@@ -136,8 +150,7 @@ export default function ScanPage() {
 
     if (!data) {
       if (isDemoQr(qrCode)) {
-        const storedDemoItem = readPrototypeItems().find((candidate) => candidate.qr_code === qrCode);
-        setItem(storedDemoItem || createDemoItem(qrCode));
+        setItem(await resolveDemoItem());
         setPageState('found');
         return;
       }
@@ -153,7 +166,7 @@ export default function ScanPage() {
       .from('items')
       .update({ total_scans: (data.total_scans || 0) + 1, last_scanned_at: new Date().toISOString() })
       .eq('qr_code', qrCode);
-  }, [qrCode, supabase]);
+  }, [qrCode, resolveDemoItem, supabase]);
 
   // Check localStorage for existing session
   useEffect(() => {

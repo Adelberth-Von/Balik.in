@@ -207,7 +207,11 @@ function writeMemoryMessage(payload: any) {
 }
 
 function visibleDemoSessions(sessions: any[]) {
-  return sessions.filter((session) => !session.session_token?.startsWith('demo_test_'));
+  return sessions.filter(
+    (session) =>
+      !session.session_token?.startsWith('demo_test_') &&
+      !session.session_token?.startsWith('demo_item_')
+  );
 }
 
 export async function GET(req: Request) {
@@ -237,6 +241,7 @@ export async function GET(req: Request) {
         .select('*, items!inner(*)')
         .eq('items.user_id', demoUserId)
         .not('session_token', 'like', 'demo_test_%')
+        .not('session_token', 'like', 'demo_item_%')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -263,6 +268,7 @@ export async function GET(req: Request) {
       .select('*, items(*)')
       .like('session_token', 'demo%')
       .not('session_token', 'like', 'demo_test_%')
+      .not('session_token', 'like', 'demo_item_%')
       .order('created_at', { ascending: false })
       .limit(50);
 

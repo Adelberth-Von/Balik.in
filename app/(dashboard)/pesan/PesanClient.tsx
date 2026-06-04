@@ -51,7 +51,11 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
   };
 
   const removeInternalDemoSessions = (sessionList: SessionWithItem[]) =>
-    sessionList.filter((session) => !session.session_token?.startsWith('demo_test_'));
+    sessionList.filter(
+      (session) =>
+        !session.session_token?.startsWith('demo_test_') &&
+        !session.session_token?.startsWith('demo_item_')
+    );
 
   const readLocalDemoSessions = () =>
     removeInternalDemoSessions(mergeDemoSessions([] as SessionWithItem[]));
