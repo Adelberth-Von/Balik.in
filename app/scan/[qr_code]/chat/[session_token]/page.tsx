@@ -141,6 +141,19 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  const fetchChatSnapshot = useCallback(async () => {
+    const response = await fetch(`/api/chat/session?token=${sessionToken}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+
+    const parsed = await response.json();
+    if (!parsed?.session) return null;
+
+    return {
+      session: parsed.session as ScanSession & { items?: Item },
+      messages: Array.isArray(parsed.messages) ? (parsed.messages as ChatMessage[]) : [],
+    };
+  }, [sessionToken]);
+
   const loadDemoChat = async () => {
     if (!isDemoQr(qrCode)) return false;
 
@@ -234,13 +247,24 @@ export default function ChatPage() {
         console.error('Chat session query error:', sessionError);
       }
 
-      if (!sessionData) {
+      let resolvedSession = sessionData as (ScanSession & { items?: Item }) | null;
+      let snapshotMessages: ChatMessage[] | null = null;
+
+      if (!resolvedSession) {
+        const snapshot = await fetchChatSnapshot();
+        if (snapshot) {
+          resolvedSession = snapshot.session;
+          snapshotMessages = snapshot.messages;
+        }
+      }
+
+      if (!resolvedSession) {
         if (await loadDemoChat()) return;
         return;
       }
 
-      setSession(sessionData);
-      const itemData = sessionData.items as Item;
+      setSession(resolvedSession);
+      const itemData = resolvedSession.items as Item;
       setItem(itemData);
       setDemoChat(false);
 
@@ -257,24 +281,31 @@ export default function ChatPage() {
         await supabase
           .from('scan_sessions')
           .update({ is_read_by_owner: true })
-          .eq('id', sessionData.id);
+          .eq('id', resolvedSession.id);
       }
 
       // Fetch messages
-      const { data: msgs } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', sessionData.id)
-        .order('created_at', { ascending: true });
+      const { data: msgs } = snapshotMessages
+        ? { data: snapshotMessages }
+        : await supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('session_id', resolvedSession.id)
+            .order('created_at', { ascending: true });
 
-      if (msgs) setMessages(sortMessages(msgs as ChatMessage[]));
+      if (msgs?.length) {
+        setMessages(sortMessages(msgs as ChatMessage[]));
+      } else {
+        const snapshot = await fetchChatSnapshot();
+        if (snapshot?.messages.length) setMessages(sortMessages(snapshot.messages));
+      }
 
       // Mark messages as read if owner
       if ((user && itemData.user_id === user.id) || isDemoOwnerView) {
         await supabase
           .from('chat_messages')
           .update({ is_read: true })
-          .eq('session_id', sessionData.id)
+          .eq('session_id', resolvedSession.id)
           .eq('sender_role', 'finder');
       }
     } catch (error) {
@@ -288,18 +319,25 @@ export default function ChatPage() {
   const reloadMessages = useCallback(async () => {
     if (!session || demoChat) return;
 
-    const { data } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('created_at', { ascending: true });
+    const [{ data }, snapshot] = await Promise.all([
+      supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: true }),
+      fetchChatSnapshot().catch(() => null),
+    ]);
 
-    if (!data) return;
+    const incoming = [
+      ...((data || []) as ChatMessage[]),
+      ...((snapshot?.messages || []) as ChatMessage[]),
+    ];
+    if (incoming.length === 0) return;
     setMessages((prev) => {
-      const merged = mergeMessages(prev, data as ChatMessage[]);
+      const merged = mergeMessages(prev, incoming);
       return areMessagesEqual(prev, merged) ? prev : merged;
     });
-  }, [demoChat, session, supabase]);
+  }, [demoChat, fetchChatSnapshot, session, supabase]);
 
   // Real-time new messages and updates
   useChatRealtime(
