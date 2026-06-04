@@ -38,14 +38,38 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
       session.items?.qr_code?.startsWith('BLJN-DEMO')
     );
 
-  // Sync demo sessions from browser storage. The serverless demo API is only a fallback,
-  // because Vercel memory can reset and return old/empty chat data.
+  // Sync demo sessions from browser storage and the demo API. Empty API responses are ignored
+  // so serverless memory resets cannot wipe conversations that already exist in the UI.
   useEffect(() => {
     const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (!isDemo) return;
 
-    const syncDemoSessions = () => {
+    const mergeSessions = (prev: SessionWithItem[], incoming: SessionWithItem[]) => {
+      const merged = [...prev];
+
+      for (const session of incoming) {
+        const existingIndex = merged.findIndex(
+          (candidate) => candidate.session_token === session.session_token
+        );
+
+        if (existingIndex >= 0) merged[existingIndex] = { ...merged[existingIndex], ...session };
+        else merged.unshift(session);
+      }
+
+      return merged;
+    };
+
+    const syncDemoSessions = async () => {
       setLocalSessions((prev) => mergeDemoSessions(prev));
+
+      try {
+        const response = await fetch('/api/demo', { cache: 'no-store' });
+        const demoSessions = await response.json();
+
+        if (Array.isArray(demoSessions) && demoSessions.length > 0) {
+          setLocalSessions((prev) => mergeDemoSessions(mergeSessions(prev, demoSessions)));
+        }
+      } catch {}
     };
 
     const handleStorage = (event: StorageEvent) => {
