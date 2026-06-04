@@ -82,6 +82,21 @@ const areMessagesEqual = (a: ChatMessage[], b: ChatMessage[]) => {
   });
 };
 
+const sortMessages = (messages: ChatMessage[]) =>
+  [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+const mergeMessages = (current: ChatMessage[], incoming: ChatMessage[]) => {
+  const merged = [...current];
+
+  for (const message of incoming) {
+    const existingIndex = merged.findIndex((candidate) => candidate.id === message.id);
+    if (existingIndex >= 0) merged[existingIndex] = { ...merged[existingIndex], ...message };
+    else merged.push(message);
+  }
+
+  return sortMessages(merged);
+};
+
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
@@ -197,12 +212,16 @@ export default function ChatPage() {
     setLoading(true);
     setDemoChat(false);
     try {
-      const authPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Koneksi Supabase terlalu lama')), 10000);
-      });
+      let user = null;
+      if (roleParam !== 'finder') {
+        const authPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Koneksi Supabase terlalu lama')), 3500);
+        });
 
-      const { data: { user } } = await Promise.race([authPromise, timeoutPromise]);
+        const authResult = await Promise.race([authPromise, timeoutPromise]);
+        user = authResult.data.user;
+      }
       if (user) setCurrentUser({ id: user.id, email: user.email || '' });
 
       const { data: sessionData, error: sessionError } = await supabase
@@ -248,7 +267,7 @@ export default function ChatPage() {
         .eq('session_id', sessionData.id)
         .order('created_at', { ascending: true });
 
-      if (msgs) setMessages(msgs);
+      if (msgs) setMessages(sortMessages(msgs as ChatMessage[]));
 
       // Mark messages as read if owner
       if ((user && itemData.user_id === user.id) || isDemoOwnerView) {
@@ -276,7 +295,10 @@ export default function ChatPage() {
       .order('created_at', { ascending: true });
 
     if (!data) return;
-    setMessages((prev) => (areMessagesEqual(prev, data as ChatMessage[]) ? prev : (data as ChatMessage[])));
+    setMessages((prev) => {
+      const merged = mergeMessages(prev, data as ChatMessage[]);
+      return areMessagesEqual(prev, merged) ? prev : merged;
+    });
   }, [demoChat, session, supabase]);
 
   // Real-time new messages and updates
@@ -285,7 +307,7 @@ export default function ChatPage() {
     (newMsg) => {
       setMessages((prev) => {
         if (prev.find((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+        return mergeMessages(prev, [newMsg]);
       });
       setIsTyping(false);
     },
@@ -296,8 +318,17 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!session || demoChat) return;
-    const interval = setInterval(reloadMessages, 2500);
-    return () => clearInterval(interval);
+    reloadMessages();
+    const activeInterval = setInterval(reloadMessages, 1200);
+    const idleInterval = setInterval(reloadMessages, 5000);
+    const handleFocus = () => reloadMessages();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(activeInterval);
+      clearInterval(idleInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [demoChat, reloadMessages, session]);
 
   // LocalStorage sync for Demo Mode
@@ -309,7 +340,25 @@ export default function ChatPage() {
       if (storedMessages.length === 0) return;
 
       const normalized = normalizeDemoMessages(storedMessages);
-      setMessages((prev) => (areMessagesEqual(prev, normalized) ? prev : normalized));
+      setMessages((prev) => {
+        const merged = mergeMessages(prev, normalized);
+        return areMessagesEqual(prev, merged) ? prev : merged;
+      });
+    };
+
+    const syncFromDemoApi = async () => {
+      try {
+        const response = await fetch(`/api/demo?token=${sessionToken}`, { cache: 'no-store' });
+        const parsed = await response.json();
+        if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+        const normalized = normalizeDemoMessages(parsed);
+        writeDemoMessages(sessionToken, mergeMessages(readDemoMessages(sessionToken), normalized));
+        setMessages((prev) => {
+          const merged = mergeMessages(prev, normalized);
+          return areMessagesEqual(prev, merged) ? prev : merged;
+        });
+      } catch {}
     };
 
     const handleStorage = (e: StorageEvent) => {
@@ -320,12 +369,15 @@ export default function ChatPage() {
 
     window.addEventListener('storage', handleStorage);
     syncFromLocalStorage();
+    syncFromDemoApi();
 
     const interval = setInterval(syncFromLocalStorage, 1000);
+    const apiInterval = setInterval(syncFromDemoApi, 1500);
 
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
+      clearInterval(apiInterval);
     };
   }, [demoChat, sessionToken]);
 
@@ -504,19 +556,22 @@ export default function ChatPage() {
 
       // Replace optimistic with real
       setMessages((prev) =>
-        prev.map((m) => (m.id.startsWith('optimistic-') ? data : m))
+        mergeMessages(
+          prev.filter((m) => m.id !== optimistic.id),
+          [data as ChatMessage]
+        )
       );
 
       // Notify owner if finder sends
       if (!isOwner && item) {
-        await supabase.from('notifications').insert({
+        supabase.from('notifications').insert({
           user_id: item.user_id,
           type: 'new_message',
           title: 'Pesan Baru',
           body: `Penemu barang kamu mengirim pesan: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`,
           session_id: session.id,
           item_id: item.id,
-        });
+        }).then();
       }
     } catch {
       setMessages((prev) => prev.filter((m) => !m.id.startsWith('optimistic-')));
