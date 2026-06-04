@@ -303,35 +303,26 @@ export default function ChatPage() {
   // LocalStorage sync for Demo Mode
   useEffect(() => {
     if (!demoChat) return;
-    
+
+    const syncFromLocalStorage = () => {
+      const storedMessages = readDemoMessages(sessionToken);
+      if (storedMessages.length === 0) return;
+
+      const normalized = normalizeDemoMessages(storedMessages);
+      setMessages((prev) => (areMessagesEqual(prev, normalized) ? prev : normalized));
+    };
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === `baljn_demo_chat_${sessionToken}`) {
-        if (e.newValue) {
-          setMessages(normalizeDemoMessages(JSON.parse(e.newValue)));
-        }
+        syncFromLocalStorage();
       }
     };
-    
+
     window.addEventListener('storage', handleStorage);
-    
-    // Auto-refresh chat for demo mode cross-browser sync
-    const interval = setInterval(async () => {
-      if (demoChat) {
-        try {
-          const res = await fetch(`/api/demo?token=${sessionToken}`);
-          const parsed = await res.json();
-          if (parsed) {
-            const normalized = normalizeDemoMessages(parsed);
-            setMessages((prev) => {
-              const prevJson = JSON.stringify(prev);
-              const nextJson = JSON.stringify(normalized);
-              return prevJson === nextJson ? prev : normalized;
-            });
-          }
-        } catch {}
-      }
-    }, 700);
-    
+    syncFromLocalStorage();
+
+    const interval = setInterval(syncFromLocalStorage, 1000);
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
@@ -355,7 +346,7 @@ export default function ChatPage() {
 
       if (demoChat) {
         markDemoMessagesRead(sessionToken, myRole);
-        fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) });
+        fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) }).catch(() => {});
       } else {
         supabase.from('chat_messages').update({ is_read: true })
           .eq('session_id', session.id)
@@ -420,14 +411,23 @@ export default function ChatPage() {
       };
 
       if (demoChat) {
-        appendDemoMessage(sessionToken, { ...payload, id: `m${Date.now()}`, session_id: sessionToken, created_at: new Date().toISOString(), is_read: false } as ChatMessage);
-        await fetch('/api/demo', {
+        const demoMessage = {
+          ...payload,
+          id: `m${Date.now()}`,
+          session_id: sessionToken,
+          created_at: new Date().toISOString(),
+          is_read: false,
+        } as ChatMessage;
+
+        setMessages((prev) => prev.map((msg) => (msg.id === optimisticId ? demoMessage : msg)));
+        appendDemoMessage(sessionToken, demoMessage);
+        fetch('/api/demo', {
           method: 'POST',
           body: JSON.stringify({
             type: 'ADD_MESSAGE',
-            payload: { ...payload, id: `m${Date.now()}`, session_id: sessionToken, created_at: new Date().toISOString() },
+            payload: demoMessage,
           }),
-        });
+        }).catch(() => {});
       } else {
         const { data, error } = await supabase.from('chat_messages').insert(payload).select().single();
         if (error) throw error;
@@ -482,11 +482,7 @@ export default function ChatPage() {
       fetch('/api/demo', {
         method: 'POST',
         body: JSON.stringify({ type: 'ADD_MESSAGE', payload: newMsg }),
-      }).catch(() => {
-        setMessages((prev) => prev.filter((msg) => msg.id !== newMsg.id));
-        setNewMessage(text);
-        alert('Gagal mengirim pesan');
-      });
+      }).catch(() => {});
 
       setSending(false);
       return;
@@ -567,17 +563,30 @@ export default function ChatPage() {
           sysMsg.created_at = new Date().toISOString();
           sysMsg.session_id = sessionToken;
 
-          await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: locationMsg }) });
-          await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: sysMsg }) });
+          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: locationMsg }) }).catch(() => {});
+          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: sysMsg }) }).catch(() => {});
           appendDemoMessage(sessionToken, locationMsg as ChatMessage);
           appendDemoMessage(sessionToken, sysMsg as ChatMessage);
+          setMessages((prev) => {
+            const next = [...prev];
+            for (const msg of [locationMsg as ChatMessage, sysMsg as ChatMessage]) {
+              if (!next.some((candidate) => candidate.id === msg.id)) next.push(msg);
+            }
+            return next;
+          });
           
           if (!isOwner) {
-            await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'UPDATE_LOCATION', payload: { session_token: sessionToken, lat, lng, name: locationName } }) });
+            const updatedSession = {
+              ...session,
+              finder_latitude: lat,
+              finder_longitude: lng,
+              finder_location_name: locationName,
+              updated_at: new Date().toISOString(),
+            };
+            setSession(updatedSession);
+            saveDemoSession({ ...updatedSession, items: item || (session as any).items } as any);
+            fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'UPDATE_LOCATION', payload: { session_token: sessionToken, lat, lng, name: locationName } }) }).catch(() => {});
           }
-
-          const res = await fetch(`/api/demo?token=${sessionToken}`);
-          setMessages(await res.json());
         } else {
           await supabase.from('chat_messages').insert(locationMsg);
           await supabase.from('chat_messages').insert(sysMsg);

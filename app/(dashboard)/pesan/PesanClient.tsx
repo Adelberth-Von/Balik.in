@@ -38,34 +38,27 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
       session.items?.qr_code?.startsWith('BLJN-DEMO')
     );
 
-  // Sync demo sessions from Server memory API
+  // Sync demo sessions from browser storage. The serverless demo API is only a fallback,
+  // because Vercel memory can reset and return old/empty chat data.
   useEffect(() => {
     const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (!isDemo) return;
 
-    const syncDemoSessions = async () => {
-      try {
-        setLocalSessions((prev) => mergeDemoSessions(prev));
-        const res = await fetch('/api/demo');
-        const demoSessions = await res.json();
-        if (Array.isArray(demoSessions) && demoSessions.length > 0) {
-          // Merge with initial sessions so we don't lose the hardcoded ones if not present
-          setLocalSessions(prev => {
-            const newSessions = [...prev];
-            for (const ds of demoSessions) {
-              const idx = newSessions.findIndex(s => s.session_token === ds.session_token);
-              if (idx >= 0) newSessions[idx] = ds;
-              else newSessions.unshift(ds);
-            }
-            return newSessions;
-          });
-        }
-      } catch {}
+    const syncDemoSessions = () => {
+      setLocalSessions((prev) => mergeDemoSessions(prev));
     };
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'baljn_demo_sessions') syncDemoSessions();
+    };
+
+    window.addEventListener('storage', handleStorage);
     syncDemoSessions();
     const interval = setInterval(syncDemoSessions, 1000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, [sessions]);
 
   // Polling for real backend updates

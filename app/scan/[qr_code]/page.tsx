@@ -25,10 +25,16 @@ type PageState = 'loading' | 'found' | 'submitted' | 'not_found';
 
 const isDemoQr = (code: string) => code.startsWith('BALIK-DEMO-') || code.startsWith('BLJN-DEMO');
 
+const getDemoIdFromQr = (code: string) =>
+  code.startsWith('BALIK-DEMO-')
+    ? code.replace('BALIK-DEMO-', '')
+    : code.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
+
+const getDemoSessionToken = (code: string) =>
+  `demo_${code.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
+
 const createDemoItem = (qrCode: string): Item => {
-  const demoId = qrCode.startsWith('BALIK-DEMO-')
-    ? qrCode.replace('BALIK-DEMO-', '')
-    : qrCode.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
+  const demoId = getDemoIdFromQr(qrCode);
   const demoMap: Record<string, Partial<Item>> = {
     '1': {
       item_name: 'Charger Laptop Dell',
@@ -167,10 +173,9 @@ export default function ScanPage() {
     try {
       let token = crypto.randomUUID();
 
-      if (qrCode.startsWith('BALIK-DEMO-') && item.user_id === 'demo123') {
-        // Link demo items to their hardcoded tokens in the dashboard mock!
-        const demoId = qrCode.replace('BALIK-DEMO-', '');
-        token = demoId === '2' ? 'tok_1' : `tok_demo_${demoId}`;
+      if (isDemoQr(qrCode) && item.user_id === 'demo123') {
+        const demoId = getDemoIdFromQr(qrCode);
+        token = getDemoSessionToken(qrCode);
         
         const initialMessages: Array<Record<string, unknown>> = [
           { id: 'm1', session_id: token, sender_role: 'system', message_type: 'system', message: `Sesi chat dimulai - ${new Date().toLocaleString('id-ID')}`, is_read: true, created_at: new Date().toISOString() },
@@ -189,6 +194,7 @@ export default function ScanPage() {
           finder_latitude: geo.latitude || null,
           finder_longitude: geo.longitude || null,
           finder_location_name: locationName || manualLocation || 'Lokasi Penemu', 
+          initial_message: message,
           status: 'open', is_read_by_owner: false, created_at: new Date().toISOString(),
           items: {
             id: item.id || demoId,
@@ -199,13 +205,12 @@ export default function ScanPage() {
           }
         };
 
-        // Sync to Server memory API for Incognito cross-browser demo support!
         saveDemoSession(sessionPayload as any);
         writeDemoMessages(token, initialMessages as any);
 
-        await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'CREATE_SESSION', payload: sessionPayload }) });
+        fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'CREATE_SESSION', payload: sessionPayload }) }).catch(() => {});
         for (const msg of initialMessages) {
-          await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: msg }) });
+          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: msg }) }).catch(() => {});
         }
         
         localStorage.setItem(`baljn_session_${qrCode}`, token);
