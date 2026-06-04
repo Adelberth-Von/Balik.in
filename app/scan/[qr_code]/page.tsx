@@ -181,7 +181,7 @@ export default function ScanPage() {
     try {
       let token = crypto.randomUUID();
 
-      if (isDemoQr(qrCode) && item.user_id === 'demo123') {
+      if (isDemoQr(qrCode)) {
         const demoId = getDemoIdFromQr(qrCode);
         token = getDemoSessionToken(qrCode);
         
