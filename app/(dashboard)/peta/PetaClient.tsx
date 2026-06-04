@@ -57,7 +57,9 @@ export default function PetaClient({ sessions }: { sessions: SessionWithItem[] }
   });
 
   useEffect(() => {
-    const isDemo = sessions.some(s => s.items?.qr_code?.startsWith('BALIK-DEMO-'));
+    const isDemo = sessions.some(
+      s => s.items?.qr_code?.startsWith('BALIK-DEMO-') || s.items?.qr_code?.startsWith('BLJN-DEMO')
+    );
     if (!isDemo) return;
 
     // Demo Mode Sync

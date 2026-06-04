@@ -38,26 +38,28 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
       session.items?.qr_code?.startsWith('BLJN-DEMO')
     );
 
+  const mergeSessions = (base: SessionWithItem[], incoming: SessionWithItem[]) => {
+    const merged = [...base];
+
+    for (const session of incoming) {
+      const existingIndex = merged.findIndex(
+        (candidate) => candidate.session_token === session.session_token
+      );
+
+      if (existingIndex >= 0) merged[existingIndex] = { ...merged[existingIndex], ...session };
+      else merged.unshift(session);
+    }
+
+    return merged.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  };
+
   // Sync demo sessions from browser storage and the demo API. Empty API responses are ignored
   // so serverless memory resets cannot wipe conversations that already exist in the UI.
   useEffect(() => {
     const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (!isDemo) return;
-
-    const mergeSessions = (prev: SessionWithItem[], incoming: SessionWithItem[]) => {
-      const merged = [...prev];
-
-      for (const session of incoming) {
-        const existingIndex = merged.findIndex(
-          (candidate) => candidate.session_token === session.session_token
-        );
-
-        if (existingIndex >= 0) merged[existingIndex] = { ...merged[existingIndex], ...session };
-        else merged.unshift(session);
-      }
-
-      return merged;
-    };
 
     const syncDemoSessions = async () => {
       setLocalSessions((prev) => mergeDemoSessions(prev));
@@ -90,11 +92,29 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
     const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (isDemo) return;
 
-    // Refresh the server component data every 5 seconds
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 5000);
-    return () => clearInterval(interval);
+    const syncOwnerSessions = async () => {
+      try {
+        const response = await fetch('/api/owner/sessions', { cache: 'no-store' });
+        const parsed = await response.json();
+
+        if (Array.isArray(parsed.sessions)) {
+          setLocalSessions((prev) => mergeSessions(prev, parsed.sessions));
+        }
+      } catch {}
+    };
+
+    syncOwnerSessions();
+    const interval = setInterval(syncOwnerSessions, 3000);
+    const refreshInterval = setInterval(() => router.refresh(), 15000);
+
+    const handleFocus = () => syncOwnerSessions();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [router, sessions]);
 
   const filtered = localSessions.filter((s) => {

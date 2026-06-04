@@ -9,6 +9,8 @@ import { STATUS_CONFIG } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
 import { mergePrototypeItems } from '@/lib/utils/demo-items';
 
+type ScanStats = Record<string, { total_scans: number; last_scanned_at: string | null }>;
+
 const CATEGORIES: { value: ItemCategory | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua Kategori' },
   { value: 'elektronik', label: 'Elektronik' },
@@ -31,8 +33,51 @@ const STATUSES: { value: ItemStatus | 'all'; label: string }[] = [
   { value: 'inactive', label: 'Nonaktif' },
 ];
 
+function applyScanStats(items: Item[], stats: ScanStats) {
+  return items.map((item) => {
+    const itemStats = stats[item.id] || stats[item.qr_code];
+    if (!itemStats) return item;
+
+    return {
+      ...item,
+      total_scans: Math.max(item.total_scans || 0, itemStats.total_scans),
+      last_scanned_at:
+        item.last_scanned_at &&
+        itemStats.last_scanned_at &&
+        new Date(item.last_scanned_at) > new Date(itemStats.last_scanned_at)
+          ? item.last_scanned_at
+          : itemStats.last_scanned_at || item.last_scanned_at,
+    };
+  });
+}
+
+function buildStatsFromSessions(sessions: Array<Record<string, any>>): ScanStats {
+  return sessions.reduce<ScanStats>((acc, session) => {
+    const keys = [
+      session.item_id,
+      session.items?.id,
+      session.items?.qr_code,
+    ].filter(Boolean) as string[];
+
+    for (const key of keys) {
+      const current = acc[key] || { total_scans: 0, last_scanned_at: null };
+      current.total_scans += 1;
+      if (
+        session.created_at &&
+        (!current.last_scanned_at || new Date(session.created_at) > new Date(current.last_scanned_at))
+      ) {
+        current.last_scanned_at = session.created_at;
+      }
+      acc[key] = current;
+    }
+
+    return acc;
+  }, {});
+}
+
 export default function ItemsClient({ items }: { items: Item[] }) {
   const [localItems, setLocalItems] = useState(items);
+  const [scanStats, setScanStats] = useState<ScanStats>({});
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ItemCategory | 'all'>('all');
   const [status, setStatus] = useState<ItemStatus | 'all'>('all');
@@ -41,8 +86,39 @@ export default function ItemsClient({ items }: { items: Item[] }) {
   const ITEMS_PER_PAGE = 6; // Set to 6 so it's easier to see pagination with dummy data
 
   useEffect(() => {
-    setLocalItems(mergePrototypeItems(items));
-  }, [items]);
+    setLocalItems(applyScanStats(mergePrototypeItems(items), scanStats));
+  }, [items, scanStats]);
+
+  useEffect(() => {
+    const syncScanStats = async () => {
+      try {
+        const isDemo =
+          typeof document !== 'undefined' && document.cookie.includes('demo_mode=true');
+        const response = await fetch(isDemo ? '/api/demo' : '/api/owner/scan-stats', {
+          cache: 'no-store',
+        });
+        const parsed = await response.json();
+
+        if (isDemo && Array.isArray(parsed)) {
+          setScanStats(buildStatsFromSessions(parsed));
+          return;
+        }
+
+        if (parsed?.stats && typeof parsed.stats === 'object') {
+          setScanStats(parsed.stats);
+        }
+      } catch {}
+    };
+
+    syncScanStats();
+    const interval = setInterval(syncScanStats, 5000);
+    window.addEventListener('focus', syncScanStats);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', syncScanStats);
+    };
+  }, []);
 
   const filtered = localItems.filter((item) => {
     const matchSearch = item.item_name.toLowerCase().includes(search.toLowerCase());

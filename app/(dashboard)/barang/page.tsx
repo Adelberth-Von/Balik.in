@@ -22,11 +22,44 @@ export default async function BarangPage() {
 
   if (!user) redirect('/login');
 
-  const { data: items } = await supabase
-    .from('items')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+  const [{ data: items }, { data: sessions }] = await Promise.all([
+    supabase
+      .from('items')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('scan_sessions')
+      .select('item_id, created_at, items!inner(user_id)')
+      .eq('items.user_id', user.id),
+  ]);
 
-  return <ItemsClient items={items || []} />;
+  const scanStats = (sessions || []).reduce<Record<string, { count: number; last: string | null }>>(
+    (acc, session) => {
+      const current = acc[session.item_id] || { count: 0, last: null };
+      current.count += 1;
+      if (!current.last || new Date(session.created_at) > new Date(current.last)) {
+        current.last = session.created_at;
+      }
+      acc[session.item_id] = current;
+      return acc;
+    },
+    {}
+  );
+
+  const hydratedItems = (items || []).map((item) => {
+    const stats = scanStats[item.id];
+    if (!stats) return item;
+
+    return {
+      ...item,
+      total_scans: Math.max(item.total_scans || 0, stats.count),
+      last_scanned_at:
+        item.last_scanned_at && new Date(item.last_scanned_at) > new Date(stats.last || 0)
+          ? item.last_scanned_at
+          : stats.last || item.last_scanned_at,
+    };
+  });
+
+  return <ItemsClient items={hydratedItems} />;
 }

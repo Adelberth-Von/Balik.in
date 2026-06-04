@@ -81,6 +81,27 @@ CREATE INDEX IF NOT EXISTS idx_items_qr_code ON public.items(qr_code);
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_token ON public.scan_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON public.chat_messages(session_id);
 
+-- Keep item scan counters in sync even when the scan page is opened by an
+-- anonymous finder. This avoids relying on public clients updating items.
+CREATE OR REPLACE FUNCTION public.bump_item_scan_stats()
+RETURNS trigger AS $$
+BEGIN
+  UPDATE public.items
+  SET
+    total_scans = COALESCE(total_scans, 0) + 1,
+    last_scanned_at = COALESCE(NEW.created_at, now()),
+    updated_at = now()
+  WHERE id = NEW.item_id;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS scan_sessions_bump_item_stats ON public.scan_sessions;
+CREATE TRIGGER scan_sessions_bump_item_stats
+  AFTER INSERT ON public.scan_sessions
+  FOR EACH ROW EXECUTE FUNCTION public.bump_item_scan_stats();
+
 -- Supabase Realtime publication. Required for live chat/dashboard updates.
 DO $$
 BEGIN
