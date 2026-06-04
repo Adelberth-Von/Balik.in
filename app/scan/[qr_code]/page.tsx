@@ -33,6 +33,14 @@ const getDemoIdFromQr = (code: string) =>
 const getDemoSessionToken = (code: string) =>
   `demo_${code.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
 
+const postDemoEvent = (type: string, payload: Record<string, unknown>) =>
+  fetch('/api/demo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, payload }),
+    keepalive: true,
+  });
+
 const createDemoItem = (qrCode: string): Item => {
   const demoId = getDemoIdFromQr(qrCode);
   const demoMap: Record<string, Partial<Item>> = {
@@ -208,10 +216,17 @@ export default function ScanPage() {
         saveDemoSession(sessionPayload as any);
         writeDemoMessages(token, initialMessages as any);
 
-        fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'CREATE_SESSION', payload: sessionPayload }) }).catch(() => {});
-        for (const msg of initialMessages) {
-          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: msg }) }).catch(() => {});
-        }
+        const demoWrites = [
+          postDemoEvent('CREATE_SESSION', sessionPayload),
+          ...initialMessages.map((msg) =>
+            postDemoEvent('ADD_MESSAGE', { ...msg, session: sessionPayload })
+          ),
+        ];
+
+        await Promise.race([
+          Promise.allSettled(demoWrites),
+          new Promise((resolve) => setTimeout(resolve, 1200)),
+        ]);
         
         localStorage.setItem(`baljn_session_${qrCode}`, token);
         router.replace(`/scan/${qrCode}/chat/${token}?role=finder`);

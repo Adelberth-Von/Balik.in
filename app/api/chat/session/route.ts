@@ -9,7 +9,7 @@ export async function GET(req: Request) {
 
   if (!token) {
     return NextResponse.json(
-      { ok: false, message: 'Token sesi wajib diisi.', session: null, messages: [] },
+      { ok: false, message: 'Token sesi wajib diisi.' },
       { status: 400 }
     );
   }
@@ -23,14 +23,14 @@ export async function GET(req: Request) {
 
   if (sessionError) {
     return NextResponse.json(
-      { ok: false, message: sessionError.message, session: null, messages: [] },
+      { ok: false, message: sessionError.message },
       { status: 500 }
     );
   }
 
   if (!session) {
     return NextResponse.json(
-      { ok: false, message: 'Sesi tidak ditemukan.', session: null, messages: [] },
+      { ok: false, message: 'Sesi tidak ditemukan.' },
       { status: 404 }
     );
   }
@@ -43,10 +43,14 @@ export async function GET(req: Request) {
 
   if (messagesError) {
     return NextResponse.json(
-      { ok: false, message: messagesError.message, session, messages: [] },
+      { ok: false, message: messagesError.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ ok: true, session, messages: messages || [] });
+  return NextResponse.json({
+    ok: true,
+    session,
+    messages: messages || [],
+  });
 }

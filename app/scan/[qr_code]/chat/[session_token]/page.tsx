@@ -141,6 +141,33 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  const getDemoSessionSnapshot = useCallback(() => {
+    if (!session) return undefined;
+
+    return {
+      ...session,
+      items: item || (session as ScanSession & { items?: Item }).items,
+      session_token: sessionToken,
+    };
+  }, [item, session, sessionToken]);
+
+  const postDemoEvent = useCallback(
+    (type: string, payload: Record<string, unknown>) =>
+      fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          payload: {
+            ...payload,
+            session: getDemoSessionSnapshot(),
+          },
+        }),
+        keepalive: true,
+      }).catch(() => {}),
+    [getDemoSessionSnapshot]
+  );
+
   const fetchChatSnapshot = useCallback(async () => {
     const response = await fetch(`/api/chat/session?token=${sessionToken}`, { cache: 'no-store' });
     if (!response.ok) return null;
@@ -436,7 +463,7 @@ export default function ChatPage() {
 
       if (demoChat) {
         markDemoMessagesRead(sessionToken, myRole);
-        fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) }).catch(() => {});
+        postDemoEvent('MARK_READ', { session_token: sessionToken, role: myRole });
       } else {
         supabase.from('chat_messages').update({ is_read: true })
           .eq('session_id', session.id)
@@ -446,7 +473,7 @@ export default function ChatPage() {
           .then();
       }
     }
-  }, [messages, session, isOwner, sessionToken, demoChat, supabase]);
+  }, [messages, session, isOwner, sessionToken, demoChat, supabase, postDemoEvent]);
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -511,13 +538,7 @@ export default function ChatPage() {
 
         setMessages((prev) => prev.map((msg) => (msg.id === optimisticId ? demoMessage : msg)));
         appendDemoMessage(sessionToken, demoMessage);
-        fetch('/api/demo', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'ADD_MESSAGE',
-            payload: demoMessage,
-          }),
-        }).catch(() => {});
+        postDemoEvent('ADD_MESSAGE', demoMessage as unknown as Record<string, unknown>);
       } else {
         const { data, error } = await supabase.from('chat_messages').insert(payload).select().single();
         if (error) throw error;
@@ -569,10 +590,7 @@ export default function ChatPage() {
         prev.map((msg) => (msg.id === optimistic.id ? newMsg as ChatMessage : msg))
       );
       appendDemoMessage(sessionToken, newMsg as ChatMessage);
-      fetch('/api/demo', {
-        method: 'POST',
-        body: JSON.stringify({ type: 'ADD_MESSAGE', payload: newMsg }),
-      }).catch(() => {});
+      postDemoEvent('ADD_MESSAGE', newMsg);
 
       setSending(false);
       return;
@@ -656,8 +674,8 @@ export default function ChatPage() {
           sysMsg.created_at = new Date().toISOString();
           sysMsg.session_id = sessionToken;
 
-          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: locationMsg }) }).catch(() => {});
-          fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: sysMsg }) }).catch(() => {});
+          postDemoEvent('ADD_MESSAGE', locationMsg);
+          postDemoEvent('ADD_MESSAGE', sysMsg);
           appendDemoMessage(sessionToken, locationMsg as ChatMessage);
           appendDemoMessage(sessionToken, sysMsg as ChatMessage);
           setMessages((prev) => {
@@ -678,7 +696,7 @@ export default function ChatPage() {
             };
             setSession(updatedSession);
             saveDemoSession({ ...updatedSession, items: item || (session as any).items } as any);
-            fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'UPDATE_LOCATION', payload: { session_token: sessionToken, lat, lng, name: locationName } }) }).catch(() => {});
+            postDemoEvent('UPDATE_LOCATION', { session_token: sessionToken, lat, lng, name: locationName });
           }
         } else {
           await supabase.from('chat_messages').insert(locationMsg);
@@ -735,10 +753,7 @@ export default function ChatPage() {
       } as any);
       setMessages((prev) => [...prev, systemMsg]);
       appendDemoMessage(sessionToken, systemMsg);
-      fetch('/api/demo', {
-        method: 'POST',
-        body: JSON.stringify({ type: 'ADD_MESSAGE', payload: systemMsg }),
-      }).catch(() => {});
+      postDemoEvent('ADD_MESSAGE', systemMsg as unknown as Record<string, unknown>);
       setShowConfirmReturn(false);
       setShowRating(true);
       return;

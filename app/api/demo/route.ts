@@ -31,16 +31,22 @@ async function getDbSessionByToken(
 }
 
 function writeMemorySession(payload: any) {
+  if (!payload?.session_token) return;
   const existingIndex = mockSessions.findIndex(s => s.session_token === payload.session_token);
   if (existingIndex >= 0) mockSessions[existingIndex] = payload;
   else mockSessions.push(payload);
 }
 
 function writeMemoryMessage(payload: any) {
+  if (payload.session?.session_token) {
+    writeMemorySession(payload.session);
+  }
+
   const token = payload.session_id;
   if (!mockMessages[token]) mockMessages[token] = [];
   if (!mockMessages[token].some((message) => message.id === payload.id)) {
-    mockMessages[token].push({ is_read: false, ...payload });
+    const { session: _session, ...messagePayload } = payload;
+    mockMessages[token].push({ is_read: false, ...messagePayload });
   }
 
   const session = mockSessions.find(s => s.session_token === token);
@@ -123,6 +129,10 @@ export async function POST(req: Request) {
   }
 
   if (type === 'ADD_MESSAGE') {
+    if (payload.session?.session_token) {
+      writeMemorySession(payload.session);
+    }
+
     if (admin) {
       const dbSession = await getDbSessionByToken(admin, payload.session_id);
       if (dbSession?.id) {
