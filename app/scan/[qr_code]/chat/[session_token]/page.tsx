@@ -614,7 +614,23 @@ export default function ChatPage() {
         created_at: new Date().toISOString(),
       };
 
-      setSession((prev) => (prev ? { ...prev, status: 'returned' } : prev));
+      const updatedSession: ScanSession = {
+        ...session,
+        status: 'returned',
+        owner_confirmed_return: isOwner ? true : session.owner_confirmed_return,
+        finder_confirmed_return: !isOwner ? true : session.finder_confirmed_return,
+        updated_at: new Date().toISOString(),
+      };
+
+      setSession(updatedSession);
+      saveDemoSession({
+        ...updatedSession,
+        items: item
+          ? { ...item, status: 'returned' }
+          : session.items
+            ? { ...session.items, status: 'returned' }
+            : undefined,
+      } as any);
       setMessages((prev) => [...prev, systemMsg]);
       appendDemoMessage(sessionToken, systemMsg);
       fetch('/api/demo', {
