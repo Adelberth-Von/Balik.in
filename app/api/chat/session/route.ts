@@ -3,6 +3,27 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+const DEMO_META_PREFIX = '__BALIK_DEMO_META__:';
+
+function hydrateDemoSession(session: any) {
+  const detail = session?.finder_location_detail;
+  if (typeof detail !== 'string' || !detail.startsWith(DEMO_META_PREFIX)) return session;
+
+  try {
+    const itemMeta = JSON.parse(detail.slice(DEMO_META_PREFIX.length));
+    return {
+      ...session,
+      finder_location_detail: null,
+      items: {
+        ...(session.items || {}),
+        ...itemMeta,
+      },
+    };
+  } catch {
+    return session;
+  }
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token');
@@ -50,7 +71,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    session,
+    session: hydrateDemoSession(session),
     messages: messages || [],
   });
 }

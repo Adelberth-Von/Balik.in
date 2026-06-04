@@ -206,6 +206,10 @@ function writeMemoryMessage(payload: any) {
   }
 }
 
+function visibleDemoSessions(sessions: any[]) {
+  return sessions.filter((session) => !session.session_token?.startsWith('demo_test_'));
+}
+
 export async function GET(req: Request) {
   const admin = createAdminSupabaseClient();
   const publicClient = createPublicSupabaseClient();
@@ -232,10 +236,11 @@ export async function GET(req: Request) {
         .from('scan_sessions')
         .select('*, items!inner(*)')
         .eq('items.user_id', demoUserId)
+        .not('session_token', 'like', 'demo_test_%')
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return Response.json(data || []);
+      return Response.json(visibleDemoSessions(data || []));
     }
   }
 
@@ -257,17 +262,18 @@ export async function GET(req: Request) {
       .from('scan_sessions')
       .select('*, items(*)')
       .like('session_token', 'demo%')
+      .not('session_token', 'like', 'demo_test_%')
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (data?.length) return Response.json(data.map(hydrateDemoSession));
+    if (data?.length) return Response.json(visibleDemoSessions(data.map(hydrateDemoSession)));
   }
 
   if (token) {
     return Response.json(mockMessages[token] || []);
   }
 
-  return Response.json(mockSessions);
+  return Response.json(visibleDemoSessions(mockSessions));
 }
 
 export async function POST(req: Request) {

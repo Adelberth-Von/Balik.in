@@ -28,6 +28,7 @@ import {
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
 const isDemoQr = (qrCode: string) => qrCode.startsWith('BALIK-DEMO-') || qrCode.startsWith('BLJN-DEMO');
+const isDemoSessionToken = (token: string) => token.startsWith('demo');
 
 const createDemoItem = (qrCode: string) => {
   const demoId = qrCode.startsWith('BALIK-DEMO-')
@@ -199,7 +200,7 @@ export default function ChatPage() {
         const sessionRes = await fetch('/api/demo');
         const demoSessions = await sessionRes.json();
         if (Array.isArray(demoSessions)) {
-        savedSession = demoSessions.find((candidate) => candidate.session_token === sessionToken) || null;
+          savedSession = demoSessions.find((candidate) => candidate.session_token === sessionToken) || null;
         }
       }
     } catch {}
@@ -237,13 +238,7 @@ export default function ChatPage() {
       }
     } catch {}
 
-    // Fallback to local storage (legacy)
-    const fallbackMessages = [
-      { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', is_read: true, created_at: new Date().toISOString() },
-      { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', is_read: false, created_at: new Date().toISOString() }
-    ] as ChatMessage[];
-    writeDemoMessages(sessionToken, fallbackMessages);
-    setMessages(fallbackMessages);
+    setMessages([]);
 
     return true;
   };
@@ -293,7 +288,14 @@ export default function ChatPage() {
       setSession(resolvedSession);
       const itemData = resolvedSession.items as Item;
       setItem(itemData);
-      setDemoChat(false);
+      const shouldUseDemoPipeline =
+        isDemoQr(qrCode) ||
+        isDemoQr(itemData.qr_code) ||
+        isDemoSessionToken(sessionToken);
+      setDemoChat(shouldUseDemoPipeline);
+      if (shouldUseDemoPipeline) {
+        saveDemoSession({ ...resolvedSession, items: itemData } as any);
+      }
 
       // Determine if viewer is owner
       const isDemoOwnerView =
@@ -314,11 +316,16 @@ export default function ChatPage() {
       // Fetch messages
       const { data: msgs } = snapshotMessages
         ? { data: snapshotMessages }
-        : await supabase
-            .from('chat_messages')
-            .select('*')
-            .eq('session_id', resolvedSession.id)
-            .order('created_at', { ascending: true });
+        : shouldUseDemoPipeline
+          ? { data: await fetch('/api/demo?token=' + sessionToken, { cache: 'no-store' })
+              .then((response) => response.json())
+              .then((parsed) => (Array.isArray(parsed) ? parsed : []))
+              .catch(() => []) }
+          : await supabase
+              .from('chat_messages')
+              .select('*')
+              .eq('session_id', resolvedSession.id)
+              .order('created_at', { ascending: true });
 
       if (msgs?.length) {
         setMessages(sortMessages(msgs as ChatMessage[]));
@@ -590,7 +597,18 @@ export default function ChatPage() {
         prev.map((msg) => (msg.id === optimistic.id ? newMsg as ChatMessage : msg))
       );
       appendDemoMessage(sessionToken, newMsg as ChatMessage);
-      postDemoEvent('ADD_MESSAGE', newMsg);
+
+      const updatedSession = {
+        ...session,
+        initial_message:
+          senderRole === 'finder' ? text : session.initial_message || text,
+        is_read_by_owner: senderRole === 'finder' ? false : session.is_read_by_owner,
+        updated_at: new Date().toISOString(),
+        items: item || (session as any).items,
+      };
+      setSession(updatedSession);
+      saveDemoSession(updatedSession as any);
+      await postDemoEvent('ADD_MESSAGE', newMsg);
 
       setSending(false);
       return;

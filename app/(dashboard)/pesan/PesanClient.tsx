@@ -22,11 +22,6 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [localSessions, setLocalSessions] = useState<SessionWithItem[]>(sessions);
-
-  // Sync localSessions when the server sessions prop updates (e.g., via router.refresh)
-  useEffect(() => {
-    setLocalSessions(sessions);
-  }, [sessions]);
   const router = useRouter();
 
   const isDemoMode = () =>
@@ -55,6 +50,26 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
     );
   };
 
+  const removeInternalDemoSessions = (sessionList: SessionWithItem[]) =>
+    sessionList.filter((session) => !session.session_token?.startsWith('demo_test_'));
+
+  const readLocalDemoSessions = () =>
+    removeInternalDemoSessions(mergeDemoSessions([] as SessionWithItem[]));
+
+  // Sync localSessions when the server sessions prop updates. In demo mode the
+  // browser/API sync below is the source of truth, so do not reset to fallback dummy data.
+  useEffect(() => {
+    const isDemo = isDemoMode() || hasDemoSession(sessions);
+    if (isDemo) {
+      setLocalSessions((prev) =>
+        removeInternalDemoSessions(mergeSessions(prev, mergeDemoSessions(sessions)))
+      );
+      return;
+    }
+
+    setLocalSessions(sessions);
+  }, [sessions]);
+
   // Sync demo sessions from browser storage and the demo API. Empty API responses are ignored
   // so serverless memory resets cannot wipe conversations that already exist in the UI.
   useEffect(() => {
@@ -62,27 +77,39 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
     if (!isDemo) return;
 
     const syncDemoSessions = async () => {
-      setLocalSessions((prev) => mergeDemoSessions(prev));
+      const localOnlySessions = readLocalDemoSessions();
 
       try {
         const response = await fetch('/api/demo', { cache: 'no-store' });
         const demoSessions = await response.json();
 
-        if (Array.isArray(demoSessions) && demoSessions.length > 0) {
-          setLocalSessions((prev) => mergeDemoSessions(mergeSessions(prev, demoSessions)));
+        if (Array.isArray(demoSessions)) {
+          const apiSessions = removeInternalDemoSessions(demoSessions as SessionWithItem[]);
+          setLocalSessions(mergeSessions(apiSessions, localOnlySessions));
+          return;
         }
       } catch {}
+
+      setLocalSessions(localOnlySessions);
     };
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === 'baljn_demo_sessions') syncDemoSessions();
     };
+    const handleFocus = () => syncDemoSessions();
+    const handleVisibility = () => {
+      if (!document.hidden) syncDemoSessions();
+    };
 
     window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
     syncDemoSessions();
-    const interval = setInterval(syncDemoSessions, 1000);
+    const interval = setInterval(syncDemoSessions, 750);
     return () => {
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
   }, [sessions]);
