@@ -7,6 +7,7 @@ import { MessageSquare, MapPin, Package, Search, Clock, ChevronRight } from 'luc
 import type { ScanSession, Item } from '@/lib/types';
 import { timeAgo } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils/cn';
+import { mergeDemoSessions } from '@/lib/utils/demo-sessions';
 
 type SessionWithItem = ScanSession & { items: Item };
 
@@ -28,13 +29,23 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
   }, [sessions]);
   const router = useRouter();
 
+  const isDemoMode = () =>
+    typeof document !== 'undefined' && document.cookie.includes('demo_mode=true');
+
+  const hasDemoSession = (sessionList: SessionWithItem[]) =>
+    sessionList.some((session) =>
+      session.items?.qr_code?.startsWith('BALIK-DEMO-') ||
+      session.items?.qr_code?.startsWith('BLJN-DEMO')
+    );
+
   // Sync demo sessions from Server memory API
   useEffect(() => {
-    const isDemo = sessions.some(s => s.items?.qr_code?.startsWith('BALIK-DEMO-'));
+    const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (!isDemo) return;
 
     const syncDemoSessions = async () => {
       try {
+        setLocalSessions((prev) => mergeDemoSessions(prev));
         const res = await fetch('/api/demo');
         const demoSessions = await res.json();
         if (Array.isArray(demoSessions) && demoSessions.length > 0) {
@@ -59,7 +70,7 @@ export default function PesanClient({ sessions }: { sessions: SessionWithItem[] 
 
   // Polling for real backend updates
   useEffect(() => {
-    const isDemo = sessions.some(s => s.items?.qr_code?.startsWith('BALIK-DEMO-'));
+    const isDemo = isDemoMode() || hasDemoSession(sessions);
     if (isDemo) return;
 
     // Refresh the server component data every 5 seconds

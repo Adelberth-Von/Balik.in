@@ -16,6 +16,13 @@ import { reverseGeocode } from '@/lib/utils/geocoding';
 import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
 import CategoryIcon from '@/components/ui/CategoryIcon';
+import {
+  appendDemoMessage,
+  markDemoMessagesRead,
+  readDemoMessages,
+  readDemoSessions,
+  writeDemoMessages,
+} from '@/lib/utils/demo-sessions';
 
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
@@ -126,11 +133,18 @@ export default function ChatPage() {
       : qrCode.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
     let savedSession: (ScanSession & { items?: Item }) | null = null;
 
+    const localSession = readDemoSessions().find(
+      (candidate) => candidate.session_token === sessionToken
+    );
+    if (localSession) savedSession = localSession as ScanSession & { items?: Item };
+
     try {
-      const sessionRes = await fetch('/api/demo');
-      const demoSessions = await sessionRes.json();
-      if (Array.isArray(demoSessions)) {
+      if (!savedSession) {
+        const sessionRes = await fetch('/api/demo');
+        const demoSessions = await sessionRes.json();
+        if (Array.isArray(demoSessions)) {
         savedSession = demoSessions.find((candidate) => candidate.session_token === sessionToken) || null;
+        }
       }
     } catch {}
 
@@ -149,29 +163,30 @@ export default function ChatPage() {
     setItem(mockItemData as any);
     setIsOwner(roleParam !== 'finder');
 
+    const localMessages = readDemoMessages(sessionToken);
+    if (localMessages.length > 0) {
+      setMessages(normalizeDemoMessages(localMessages));
+      return true;
+    }
+
     // Try to load from server API for cross-browser Demo mode
     try {
       const res = await fetch(`/api/demo?token=${sessionToken}`);
       const savedChat = await res.json();
       if (savedChat && savedChat.length > 0) {
+        writeDemoMessages(sessionToken, savedChat);
         setMessages(normalizeDemoMessages(savedChat));
         return true;
       }
     } catch {}
 
     // Fallback to local storage (legacy)
-    const savedChatLocal = localStorage.getItem(`baljn_demo_chat_${sessionToken}`);
-    if (savedChatLocal) {
-      try {
-        setMessages(normalizeDemoMessages(JSON.parse(savedChatLocal)));
-        return true;
-      } catch {}
-    }
-
-    setMessages([
+    const fallbackMessages = [
       { id: 'm1', session_id: 'mock-session-id', sender_role: 'system', message_type: 'system', message: 'Sesi chat dimulai', is_read: true, created_at: new Date().toISOString() },
       { id: 'm2', session_id: 'mock-session-id', sender_role: 'finder', message_type: 'text', message: 'Halo, saya menemukan barang ini.', is_read: false, created_at: new Date().toISOString() }
-    ] as any);
+    ] as ChatMessage[];
+    writeDemoMessages(sessionToken, fallbackMessages);
+    setMessages(fallbackMessages);
 
     return true;
   };
@@ -337,6 +352,7 @@ export default function ChatPage() {
       );
 
       if (demoChat) {
+        markDemoMessagesRead(sessionToken, myRole);
         fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'MARK_READ', payload: { session_token: sessionToken, role: myRole } }) });
       } else {
         supabase.from('chat_messages').update({ is_read: true })
@@ -402,6 +418,7 @@ export default function ChatPage() {
       };
 
       if (demoChat) {
+        appendDemoMessage(sessionToken, { ...payload, id: `m${Date.now()}`, session_id: sessionToken, created_at: new Date().toISOString(), is_read: false } as ChatMessage);
         await fetch('/api/demo', {
           method: 'POST',
           body: JSON.stringify({
@@ -459,6 +476,7 @@ export default function ChatPage() {
       setMessages((prev) =>
         prev.map((msg) => (msg.id === optimistic.id ? newMsg as ChatMessage : msg))
       );
+      appendDemoMessage(sessionToken, newMsg as ChatMessage);
       fetch('/api/demo', {
         method: 'POST',
         body: JSON.stringify({ type: 'ADD_MESSAGE', payload: newMsg }),
@@ -549,6 +567,8 @@ export default function ChatPage() {
 
           await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: locationMsg }) });
           await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: sysMsg }) });
+          appendDemoMessage(sessionToken, locationMsg as ChatMessage);
+          appendDemoMessage(sessionToken, sysMsg as ChatMessage);
           
           if (!isOwner) {
             await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'UPDATE_LOCATION', payload: { session_token: sessionToken, lat, lng, name: locationName } }) });
@@ -594,6 +614,7 @@ export default function ChatPage() {
 
       setSession((prev) => (prev ? { ...prev, status: 'returned' } : prev));
       setMessages((prev) => [...prev, systemMsg]);
+      appendDemoMessage(sessionToken, systemMsg);
       fetch('/api/demo', {
         method: 'POST',
         body: JSON.stringify({ type: 'ADD_MESSAGE', payload: systemMsg }),

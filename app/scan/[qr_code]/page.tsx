@@ -17,6 +17,7 @@ import dynamic from 'next/dynamic';
 import CategoryIcon from '@/components/ui/CategoryIcon';
 import BrandLogo from '@/components/layout/BrandLogo';
 import { readPrototypeItems } from '@/lib/utils/demo-items';
+import { saveDemoSession, writeDemoMessages } from '@/lib/utils/demo-sessions';
 
 const MiniMap = dynamic(() => import('@/components/scan/MiniMap'), { ssr: false });
 
@@ -199,6 +200,9 @@ export default function ScanPage() {
         };
 
         // Sync to Server memory API for Incognito cross-browser demo support!
+        saveDemoSession(sessionPayload as any);
+        writeDemoMessages(token, initialMessages as any);
+
         await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'CREATE_SESSION', payload: sessionPayload }) });
         for (const msg of initialMessages) {
           await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: msg }) });
