@@ -21,6 +21,7 @@ import {
   markDemoMessagesRead,
   readDemoMessages,
   readDemoSessions,
+  saveDemoSession,
   writeDemoMessages,
 } from '@/lib/utils/demo-sessions';
 
@@ -162,6 +163,7 @@ export default function ChatPage() {
     setSession(mockSessionData as any);
     setItem(mockItemData as any);
     setIsOwner(roleParam !== 'finder');
+    saveDemoSession(mockSessionData as any);
 
     const localMessages = readDemoMessages(sessionToken);
     if (localMessages.length > 0) {
