@@ -21,6 +21,11 @@ const TABS = [
   { id: 'scans', label: 'Riwayat', icon: History },
 ];
 
+const isDemoItem = (item: Item) =>
+  item.user_id === 'demo123' ||
+  item.qr_code.startsWith('BALIK-DEMO-') ||
+  item.qr_code.startsWith('BLJN-DEMO');
+
 export default function ItemDetailClient({ item, sessions }: { item: Item; sessions: ScanSession[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,7 +90,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
   const handleUpdate = async () => {
     setIsSaving(true);
     try {
-      if (currentItem.user_id === 'demo123' || currentItem.qr_code.startsWith('BALIK-DEMO-')) {
+      if (isDemoItem(currentItem)) {
         const updatedItem = { ...currentItem, ...editData };
         savePrototypeItem(updatedItem);
         setCurrentItem(updatedItem);
@@ -110,7 +115,7 @@ export default function ItemDetailClient({ item, sessions }: { item: Item; sessi
     if (!window.confirm('Yakin ingin menghapus barang ini secara permanen?')) return;
     setIsDeleting(true);
     try {
-      if (currentItem.user_id === 'demo123' || currentItem.qr_code.startsWith('BALIK-DEMO-')) {
+      if (isDemoItem(currentItem)) {
         removePrototypeItem(currentItem.id);
         toast.success('Barang prototype dihapus!');
         router.push('/barang');

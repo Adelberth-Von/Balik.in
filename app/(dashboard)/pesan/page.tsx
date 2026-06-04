@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import PesanClient from './PesanClient';
+import { getDemoDashboardData } from '@/lib/demo/server';
 
 export const metadata = { title: 'Pesan & Chat — Balik.In' };
 
@@ -15,9 +16,8 @@ export default async function PesanPage() {
   const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemo) {
-    return <PesanClient sessions={[
-      { id: 's1', item_id: '2', session_token: 'tok_1', finder_location_name: 'Perpustakaan UAJY', status: 'open', is_read_by_owner: false, created_at: new Date().toISOString(), items: { id: '2', user_id: 'demo123', item_name: 'Dompet Kulit', item_category: 'dompet', qr_code: 'BALIK-DEMO-2' } } as any,
-    ]} />;
+    const demoData = await getDemoDashboardData();
+    return <PesanClient sessions={demoData.sessions as any} />;
   }
 
   if (!user) redirect('/login');

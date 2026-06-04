@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import PetaClient from './PetaClient';
+import { getDemoDashboardData } from '@/lib/demo/server';
 
 export const metadata = { title: 'Peta Temuan — Balik.In' };
 
@@ -15,9 +16,11 @@ export default async function PetaPage() {
   const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemo) {
-    return <PetaClient sessions={[
-      { id: 's1', item_id: '2', session_token: 'tok_1', finder_location_name: 'Kampus 3 UAJY (Gedung Bonaventura)', finder_latitude: -7.7794, finder_longitude: 110.4140, status: 'open', is_read_by_owner: false, created_at: new Date().toISOString(), items: { id: '2', user_id: 'demo123', item_name: 'Dompet Kulit', item_category: 'dompet', qr_code: 'BALIK-DEMO-2' } } as any,
-    ]} />;
+    const demoData = await getDemoDashboardData();
+    const sessionsWithLocation = demoData.sessions.filter(
+      (session) => session.finder_latitude && session.finder_longitude
+    );
+    return <PetaClient sessions={sessionsWithLocation as any} />;
   }
 
   if (!user) redirect('/login');

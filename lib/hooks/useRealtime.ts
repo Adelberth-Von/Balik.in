@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import type { ChatMessage, Notification } from '@/lib/types';
 
 type RealtimeCallback<T> = (payload: T) => void;
@@ -11,12 +11,14 @@ export function useChatRealtime(
   onNewMessage: RealtimeCallback<ChatMessage>,
   onMessageUpdate?: RealtimeCallback<ChatMessage>
 ) {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   const insertCallbackRef = useRef(onNewMessage);
-  insertCallbackRef.current = onNewMessage;
-  
   const updateCallbackRef = useRef(onMessageUpdate);
-  updateCallbackRef.current = onMessageUpdate;
+
+  useEffect(() => {
+    insertCallbackRef.current = onNewMessage;
+    updateCallbackRef.current = onMessageUpdate;
+  }, [onNewMessage, onMessageUpdate]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -61,9 +63,12 @@ export function useNotificationsRealtime(
   userId: string | null,
   onNewNotification: RealtimeCallback<Notification>
 ) {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   const callbackRef = useRef(onNewNotification);
-  callbackRef.current = onNewNotification;
+
+  useEffect(() => {
+    callbackRef.current = onNewNotification;
+  }, [onNewNotification]);
 
   useEffect(() => {
     if (!userId) return;
@@ -94,9 +99,12 @@ export function useSessionsRealtime(
   itemIds: string[],
   onNewSession: RealtimeCallback<{ item_id: string }>
 ) {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   const callbackRef = useRef(onNewSession);
-  callbackRef.current = onNewSession;
+
+  useEffect(() => {
+    callbackRef.current = onNewSession;
+  }, [onNewSession]);
 
   useEffect(() => {
     if (!itemIds.length) return;
@@ -128,9 +136,12 @@ export function useSessionsRealtime(
 export function useMapRealtime(
   onLocationUpdate: RealtimeCallback<{ id: string; finder_latitude: number; finder_longitude: number; finder_location_name: string }>
 ) {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
   const callbackRef = useRef(onLocationUpdate);
-  callbackRef.current = onLocationUpdate;
+
+  useEffect(() => {
+    callbackRef.current = onLocationUpdate;
+  }, [onLocationUpdate]);
 
   useEffect(() => {
     const channel = supabase

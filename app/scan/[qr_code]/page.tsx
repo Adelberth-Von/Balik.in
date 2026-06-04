@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,7 +8,7 @@ import {
   CheckCircle2, RefreshCw, Home, Navigation, Loader2, Gift
 } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { CATEGORY_CONFIG } from '@/lib/types';
 import type { Item } from '@/lib/types';
 import { reverseGeocode } from '@/lib/utils/geocoding';
@@ -22,25 +22,56 @@ const MiniMap = dynamic(() => import('@/components/scan/MiniMap'), { ssr: false 
 
 type PageState = 'loading' | 'found' | 'submitted' | 'not_found';
 
-const isDemoQr = (code: string) => code.startsWith('BALIK-DEMO-');
+const isDemoQr = (code: string) => code.startsWith('BALIK-DEMO-') || code.startsWith('BLJN-DEMO');
 
 const createDemoItem = (qrCode: string): Item => {
-  const demoId = qrCode.replace('BALIK-DEMO-', '');
+  const demoId = qrCode.startsWith('BALIK-DEMO-')
+    ? qrCode.replace('BALIK-DEMO-', '')
+    : qrCode.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
+  const demoMap: Record<string, Partial<Item>> = {
+    '1': {
+      item_name: 'Charger Laptop Dell',
+      item_category: 'elektronik',
+      status: 'active',
+      reward_offered: false,
+      total_scans: 3,
+    },
+    '2': {
+      item_name: 'Botol Minum Hijau Tupperware',
+      item_category: 'botol',
+      status: 'lost',
+      reward_offered: true,
+      reward_amount: 30000,
+      reward_message: 'Ada reward Rp 30.000 untuk yang menemukan!',
+      total_scans: 1,
+    },
+    '3': {
+      item_name: 'Tas Ransel Hitam Eiger',
+      item_category: 'tas',
+      status: 'returned',
+      reward_offered: true,
+      reward_amount: 50000,
+      reward_message: 'Ada imbalan untuk yang menemukan',
+      total_scans: 7,
+    },
+  };
+  const demoItem = demoMap[demoId] || {};
+
   return {
     id: demoId,
     user_id: 'demo123',
-    item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-    item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
+    item_name: (demoItem.item_name as string) || 'Barang Demo',
+    item_category: (demoItem.item_category as Item['item_category']) || 'lainnya',
     qr_code: qrCode,
-    status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
+    status: (demoItem.status as Item['status']) || 'active',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     contact_preference: 'both',
-    reward_offered: demoId === '2',
-    reward_amount: demoId === '2' ? 50000 : undefined,
-    reward_message: demoId === '2' ? 'Tolong kembalikan' : undefined,
-    total_scans: demoId === '1' ? 0 : 3,
+    reward_offered: Boolean(demoItem.reward_offered),
+    reward_amount: demoItem.reward_amount,
+    reward_message: demoItem.reward_message,
+    total_scans: demoItem.total_scans || 0,
   } as Item;
 };
 
@@ -48,7 +79,7 @@ export default function ScanPage() {
   const params = useParams();
   const router = useRouter();
   const qrCode = params.qr_code as string;
-  const supabase = createClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [item, setItem] = useState<Item | null>(null);
@@ -61,17 +92,6 @@ export default function ScanPage() {
 
   const geo = useGeolocation();
 
-  // Check localStorage for existing session
-  useEffect(() => {
-    const stored = localStorage.getItem(`baljn_session_${qrCode}`);
-    if (stored) {
-      // Redirect to existing chat
-      router.replace(`/scan/${qrCode}/chat/${stored}`);
-      return;
-    }
-    fetchItem();
-  }, [qrCode]);
-
   // Reverse geocode when GPS obtained
   useEffect(() => {
     if (geo.latitude && geo.longitude && !locationName) {
@@ -81,7 +101,7 @@ export default function ScanPage() {
     }
   }, [geo.latitude, geo.longitude]);
 
-  const fetchItem = async () => {
+  const fetchItem = useCallback(async () => {
     const { data, error } = await supabase
       .from('items')
       .select('*')
@@ -91,6 +111,13 @@ export default function ScanPage() {
 
     if (error) {
       console.error('[SCAN] Gagal membaca item dari Supabase:', error);
+      if (isDemoQr(qrCode)) {
+        const storedDemoItem = readPrototypeItems().find((candidate) => candidate.qr_code === qrCode);
+        setItem(storedDemoItem || createDemoItem(qrCode));
+        setPageState('found');
+        return;
+      }
+
       setPageState('not_found');
       return;
     }
@@ -114,7 +141,18 @@ export default function ScanPage() {
       .from('items')
       .update({ total_scans: (data.total_scans || 0) + 1, last_scanned_at: new Date().toISOString() })
       .eq('qr_code', qrCode);
-  };
+  }, [qrCode, supabase]);
+
+  // Check localStorage for existing session
+  useEffect(() => {
+    const stored = localStorage.getItem(`baljn_session_${qrCode}`);
+    if (stored) {
+      // Redirect to existing chat
+      router.replace(`/scan/${qrCode}/chat/${stored}?role=finder`);
+      return;
+    }
+    fetchItem();
+  }, [fetchItem, qrCode, router]);
 
   const handleShareLocation = () => {
     geo.getCurrentPosition();
@@ -128,7 +166,7 @@ export default function ScanPage() {
     try {
       let token = crypto.randomUUID();
 
-      if (isDemoQr(qrCode) && item.user_id === 'demo123') {
+      if (qrCode.startsWith('BALIK-DEMO-') && item.user_id === 'demo123') {
         // Link demo items to their hardcoded tokens in the dashboard mock!
         const demoId = qrCode.replace('BALIK-DEMO-', '');
         token = demoId === '2' ? 'tok_1' : `tok_demo_${demoId}`;
@@ -166,6 +204,7 @@ export default function ScanPage() {
           await fetch('/api/demo', { method: 'POST', body: JSON.stringify({ type: 'ADD_MESSAGE', payload: msg }) });
         }
         
+        localStorage.setItem(`baljn_session_${qrCode}`, token);
         router.replace(`/scan/${qrCode}/chat/${token}?role=finder`);
         return;
       }
@@ -248,7 +287,7 @@ export default function ScanPage() {
 
       // Store session token in localStorage
       localStorage.setItem(`baljn_session_${qrCode}`, token);
-      router.replace(`/scan/${qrCode}/chat/${token}`);
+      router.replace(`/scan/${qrCode}/chat/${token}?role=finder`);
     } catch (err) {
       console.error(err);
       alert('Gagal mengirim pesan. Coba lagi.');

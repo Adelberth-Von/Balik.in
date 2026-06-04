@@ -28,5 +28,9 @@ export function getQrUrl(qrCode: string): string {
 }
 
 export function isValidQrCode(code: string): boolean {
-  return /^BLJN-[A-Z0-9]{8}$/.test(code) || /^BLJN-DEMO\d+$/.test(code);
+  return (
+    /^BLJN-[A-Z0-9]{8}$/.test(code) ||
+    /^BLJN-DEMO\d+$/.test(code) ||
+    /^BALIK-DEMO-[A-Za-z0-9-]+$/.test(code)
+  );
 }

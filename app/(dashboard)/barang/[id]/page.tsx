@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import ItemDetailClient from './ItemDetailClient';
 import { cookies } from 'next/headers';
+import { getDemoItemDetail } from '@/lib/demo/server';
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,35 +14,23 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const isDemo = cookieStore.get('demo_mode')?.value === 'true' || user?.email === 'demo@balik.in';
 
   if (isDemo) {
-    const mockItem = {
-      id: id,
+    const demoDetail = await getDemoItemDetail(id);
+    const item = demoDetail.item || {
+      id,
       user_id: 'demo123',
-      item_name: id === '1' ? 'MacBook Pro M2' : id === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-      item_category: id === '1' ? 'elektronik' : id === '2' ? 'dompet' : 'kunci',
+      item_name: 'Barang Demo',
+      item_category: 'lainnya',
       qr_code: `BALIK-DEMO-${id}`,
-      status: id === '1' ? 'active' : id === '2' ? 'lost' : 'returned',
+      status: 'active',
       is_active: true,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       contact_preference: 'both',
-      reward_offered: id === '2',
-      reward_amount: id === '2' ? 50000 : null,
-      reward_message: id === '2' ? 'Tolong kembalikan' : null,
-      total_scans: id === '1' ? 0 : 3
+      reward_offered: false,
+      total_scans: 0
     };
 
-    const mockSessions = id === '1' ? [] : [
-      {
-        id: 'session-1',
-        item_id: id,
-        session_token: 'token123',
-        finder_location_name: 'Gedung B UAJY',
-        status: 'open',
-        created_at: new Date().toISOString(),
-        initial_message: 'Saya temukan barang ini'
-      }
-    ];
-
-    return <ItemDetailClient item={mockItem as any} sessions={mockSessions as any} />;
+    return <ItemDetailClient item={item as any} sessions={demoDetail.sessions as any} />;
   }
   if (!user) redirect('/login');
 

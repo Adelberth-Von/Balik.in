@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, MapPin, ArrowLeft, CheckCircle2, Star, Loader2,
   Shield, X, Check, CheckCheck, ImagePlus, Camera
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { CATEGORY_CONFIG } from '@/lib/types';
 import type { ChatMessage, ScanSession, Item } from '@/lib/types';
 import { useChatRealtime } from '@/lib/hooks/useRealtime';
@@ -19,17 +19,38 @@ import CategoryIcon from '@/components/ui/CategoryIcon';
 
 const TinyMap = dynamic(() => import('@/components/chat/TinyMap'), { ssr: false });
 
-const isDemoQr = (qrCode: string) => qrCode.startsWith('BALIK-DEMO-');
+const isDemoQr = (qrCode: string) => qrCode.startsWith('BALIK-DEMO-') || qrCode.startsWith('BLJN-DEMO');
 
 const createDemoItem = (qrCode: string) => {
-  const demoId = qrCode.replace('BALIK-DEMO-', '');
+  const demoId = qrCode.startsWith('BALIK-DEMO-')
+    ? qrCode.replace('BALIK-DEMO-', '')
+    : qrCode.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
+  const demoMap: Record<string, Partial<Item>> = {
+    '1': {
+      item_name: 'Charger Laptop Dell',
+      item_category: 'elektronik',
+      status: 'active',
+    },
+    '2': {
+      item_name: 'Botol Minum Hijau Tupperware',
+      item_category: 'botol',
+      status: 'lost',
+    },
+    '3': {
+      item_name: 'Tas Ransel Hitam Eiger',
+      item_category: 'tas',
+      status: 'returned',
+    },
+  };
+  const demoItem = demoMap[demoId] || {};
+
   return {
     id: demoId,
     user_id: 'demo123',
-    item_name: demoId === '1' ? 'MacBook Pro M2' : demoId === '2' ? 'Dompet Kulit' : 'Kunci Motor',
-    item_category: demoId === '1' ? 'elektronik' : demoId === '2' ? 'dompet' : 'kunci',
+    item_name: (demoItem.item_name as string) || 'Barang Demo',
+    item_category: (demoItem.item_category as Item['item_category']) || 'lainnya',
     qr_code: qrCode,
-    status: demoId === '1' ? 'active' : demoId === '2' ? 'lost' : 'returned',
+    status: (demoItem.status as Item['status']) || 'active',
   };
 };
 
@@ -39,6 +60,20 @@ const normalizeDemoMessages = (messages: ChatMessage[]) =>
     is_read: Boolean(message.is_read),
   }));
 
+const areMessagesEqual = (a: ChatMessage[], b: ChatMessage[]) => {
+  if (a.length !== b.length) return false;
+  return a.every((message, index) => {
+    const next = b[index];
+    return (
+      next &&
+      message.id === next.id &&
+      message.message === next.message &&
+      message.is_read === next.is_read &&
+      message.created_at === next.created_at
+    );
+  });
+};
+
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
@@ -46,7 +81,7 @@ export default function ChatPage() {
   const roleParam = searchParams.get('role');
   const qrCode = params.qr_code as string;
   const sessionToken = params.session_token as string;
-  const supabase = createClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
 
   const [session, setSession] = useState<ScanSession | null>(null);
   const [item, setItem] = useState<Item | null>(null);
@@ -86,7 +121,9 @@ export default function ChatPage() {
   const loadDemoChat = async () => {
     if (!isDemoQr(qrCode)) return false;
 
-    const demoId = qrCode.replace('BALIK-DEMO-', '');
+    const demoId = qrCode.startsWith('BALIK-DEMO-')
+      ? qrCode.replace('BALIK-DEMO-', '')
+      : qrCode.replace('BLJN-DEMO', '').replace(/^0+/, '') || '1';
     let savedSession: (ScanSession & { items?: Item }) | null = null;
 
     try {
@@ -172,7 +209,13 @@ export default function ChatPage() {
       setDemoChat(false);
 
       // Determine if viewer is owner
-      if (user && itemData.user_id === user.id) {
+      const isDemoOwnerView =
+        roleParam !== 'finder' &&
+        typeof document !== 'undefined' &&
+        document.cookie.includes('demo_mode=true') &&
+        isDemoQr(itemData.qr_code);
+
+      if ((user && itemData.user_id === user.id) || isDemoOwnerView) {
         setIsOwner(true);
         // Mark as read
         await supabase
@@ -191,7 +234,7 @@ export default function ChatPage() {
       if (msgs) setMessages(msgs);
 
       // Mark messages as read if owner
-      if (user && itemData.user_id === user.id) {
+      if ((user && itemData.user_id === user.id) || isDemoOwnerView) {
         await supabase
           .from('chat_messages')
           .update({ is_read: true })
@@ -205,6 +248,19 @@ export default function ChatPage() {
       setLoading(false);
     }
   };
+
+  const reloadMessages = useCallback(async () => {
+    if (!session || demoChat) return;
+
+    const { data } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', session.id)
+      .order('created_at', { ascending: true });
+
+    if (!data) return;
+    setMessages((prev) => (areMessagesEqual(prev, data as ChatMessage[]) ? prev : (data as ChatMessage[])));
+  }, [demoChat, session, supabase]);
 
   // Real-time new messages and updates
   useChatRealtime(
@@ -220,6 +276,12 @@ export default function ChatPage() {
       setMessages((prev) => prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)));
     }
   );
+
+  useEffect(() => {
+    if (!session || demoChat) return;
+    const interval = setInterval(reloadMessages, 2500);
+    return () => clearInterval(interval);
+  }, [demoChat, reloadMessages, session]);
 
   // LocalStorage sync for Demo Mode
   useEffect(() => {

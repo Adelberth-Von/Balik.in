@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { generateQrCode, getQrUrl } from '@/lib/utils/qr-generator';
 import { CATEGORY_CONFIG } from '@/lib/types';
-import type { ItemCategory } from '@/lib/types';
+import type { Item, ItemCategory } from '@/lib/types';
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -37,6 +37,40 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = 8000): Promise<T> {
     promise,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
   ]);
+}
+
+function buildPrototypeItem(
+  id: string,
+  qrCode: string,
+  form: {
+    itemName: string;
+    category: ItemCategory;
+    description: string;
+    contactPref: 'chat' | 'whatsapp' | 'both';
+    rewardOffered: boolean;
+    rewardMessage: string;
+    rewardAmount: string;
+    isActive: boolean;
+  }
+): Item {
+  const now = new Date().toISOString();
+  return {
+    id,
+    user_id: 'demo123',
+    item_name: form.itemName,
+    item_category: form.category,
+    item_description: form.description || undefined,
+    qr_code: qrCode,
+    status: 'active',
+    is_active: form.isActive,
+    contact_preference: form.contactPref,
+    reward_offered: form.rewardOffered,
+    reward_message: form.rewardOffered ? form.rewardMessage || undefined : undefined,
+    reward_amount: form.rewardOffered && form.rewardAmount ? parseInt(form.rewardAmount, 10) : undefined,
+    total_scans: 0,
+    created_at: now,
+    updated_at: now,
+  };
 }
 
 export default function TambahBarangPage() {
@@ -79,29 +113,55 @@ export default function TambahBarangPage() {
         user?.email === 'demo@balik.in';
 
       if (isDemo) {
+        try {
+          const response = await fetch('/api/demo/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_name: itemName,
+              item_category: category,
+              item_description: description || null,
+              contact_preference: contactPref,
+              reward_offered: rewardOffered,
+              reward_message: rewardOffered ? rewardMessage : null,
+              reward_amount: rewardOffered && rewardAmount ? parseInt(rewardAmount, 10) : null,
+              is_active: isActive,
+            }),
+          });
+          const parsed = await response.json();
+          if (!response.ok || !parsed.item) {
+            throw new Error(parsed.message || 'Demo database belum siap');
+          }
+
+          const demoItem = parsed.item as Item;
+          savePrototypeItem(demoItem);
+          setCreatedItemId(demoItem.id);
+          setGeneratedQr(demoItem.qr_code);
+          setStep(2);
+          toast.success('Barang demo berhasil dibuat dan tersambung ke QR!');
+          return;
+        } catch (demoError) {
+          console.warn('[DEMO] Gagal menyimpan ke database, pakai prototype lokal:', demoError);
+        }
+
         const demoId = `demo-${Date.now()}`;
         const qrCode = `BALIK-DEMO-${demoId}`;
-        savePrototypeItem({
-          id: demoId,
-          user_id: 'demo123',
-          item_name: itemName,
-          item_category: category,
-          item_description: description || null,
-          qr_code: qrCode,
-          status: 'active',
-          is_active: isActive,
-          contact_preference: contactPref,
-          reward_offered: rewardOffered,
-          reward_message: rewardOffered ? rewardMessage : null,
-          reward_amount: rewardOffered && rewardAmount ? parseInt(rewardAmount) : null,
-          total_scans: 0,
-          created_at: new Date().toISOString(),
-        } as any);
+        const prototypeItem = buildPrototypeItem(demoId, qrCode, {
+          itemName,
+          category: category as ItemCategory,
+          description,
+          contactPref,
+          rewardOffered,
+          rewardMessage,
+          rewardAmount,
+          isActive,
+        });
+        savePrototypeItem(prototypeItem);
 
         setCreatedItemId(demoId);
         setGeneratedQr(qrCode);
         setStep(2);
-        toast.success('Barang demo berhasil dibuat!');
+        toast.success('Barang demo dibuat sementara di browser ini.');
         return;
       }
 
@@ -146,22 +206,17 @@ export default function TambahBarangPage() {
     } catch (err) {
       const demoId = `proto-${Date.now()}`;
       const qrCode = `BALIK-DEMO-${demoId}`;
-      savePrototypeItem({
-        id: demoId,
-        user_id: 'demo123',
-        item_name: itemName,
-        item_category: category,
-        item_description: description || null,
-        qr_code: qrCode,
-        status: 'active',
-        is_active: isActive,
-        contact_preference: contactPref,
-        reward_offered: rewardOffered,
-        reward_message: rewardOffered ? rewardMessage : null,
-        reward_amount: rewardOffered && rewardAmount ? parseInt(rewardAmount) : null,
-        total_scans: 0,
-        created_at: new Date().toISOString(),
-      } as any);
+      const prototypeItem = buildPrototypeItem(demoId, qrCode, {
+        itemName,
+        category: category as ItemCategory,
+        description,
+        contactPref,
+        rewardOffered,
+        rewardMessage,
+        rewardAmount,
+        isActive,
+      });
+      savePrototypeItem(prototypeItem);
       setCreatedItemId(demoId);
       setGeneratedQr(qrCode);
       setStep(2);
